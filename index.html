@@ -1,31 +1,51 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Row 2 Reach</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="file-input">
-        <input type="file" id="csv-input" name="csv-input" accept=".csv" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-logo" aria-hidden="true"></div>
+          <h1>Row 2 Reach</h1>
+        </div>
+      </header>
+      <section class="file-input card">
+        <div class="input-row">
+          <input type="file" id="csv-input" name="csv-input" accept=".csv" />
+          <div class="helper">Drop a CSV file here or click to browse.</div>
+        </div>
         <div id="table-container"></div>
-    </div>
-    <div class="buttons">
-        <div class="button-group">
-            <button id="apollo-button">Fetch Apollo</button>
-            <span id="apollo-data"></span>
+      </section>
+
+      <section class="buttons">
+        <div class="button-group card">
+          <button id="apollo-button" class="btn">Fetch Apollo</button>
+          <span id="apollo-data"></span>
         </div>
-        <div class="button-group">
-            <button id="zero-bounce-button">Fetch Zero Bounce</button>
-            <span id="zero-bounce-data"></span>
+        <div class="button-group card">
+          <button id="zero-bounce-button" class="btn">Fetch Zero Bounce</button>
+          <span id="zero-bounce-data"></span>
         </div>
-        <div class="button-group">
-            <button id="contact-out-button">Fetch Contact Out</button>
-            <span id="contact-out-data"></span>
+        <div class="button-group card">
+          <button id="contact-out-button" class="btn">Fetch Contact Out</button>
+          <span id="contact-out-data"></span>
         </div>
-    </div>
+      </section>
+    <div class="button-group card" style="margin-bottom: 20px;">
+          <button id="fetch-all-button" class="btn">Fetch All</button>
+        </div>
+
+    </main>
     <script src="file-input.js"></script>
     <script src="buttons.js"></script>
-</body>
+  </body>
 </html>

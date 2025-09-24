@@ -220,6 +220,37 @@ function buildZeroBounceFormData(csvContent) {
   return formData;
 }
 
+function applyZeroBounceResultsToCsv(originalRows, data) {
+  let rows = [...originalRows];
+
+  // Ensure "ZeroBounce Email" column exists
+  rows = ensureHeader(rows, "ZeroBounce Email");
+
+  if (data.results && Array.isArray(data.results)) {
+    const headerCols = rows[0].split(",");
+    const emailColumnIndex = headerCols.indexOf("ZeroBounce Email");
+
+    data.results.forEach((result, index) => {
+      const dataRowIndex = index + 1; // Skip header row
+      if (dataRowIndex < rows.length) {
+        const email = result.email || result.emails?.[0] || "";
+        const currentRow = rows[dataRowIndex].split(",");
+
+        if (emailColumnIndex !== -1) {
+          // Update existing "ZeroBounce Email" column
+          currentRow[emailColumnIndex] = email;
+          rows[dataRowIndex] = currentRow.join(",");
+        } else {
+          // Fallback: add new column at end (shouldn't happen due to ensureHeader above)
+          rows[dataRowIndex] = rows[dataRowIndex] + "," + email;
+        }
+      }
+    });
+  }
+
+  return rows;
+}
+
 // ------------------------------
 // ContactOut Helpers
 // ------------------------------
@@ -286,47 +317,12 @@ function applyContactOutResultsToCsv(originalRows, data) {
   return rows;
 }
 
-function applyZeroBounceResultsToCsv(originalRows, data) {
-  let rows = [...originalRows];
-
-  // Ensure "ZeroBounce Email" column exists
-  rows = ensureHeader(rows, "ZeroBounce Email");
-
-  if (data.results && Array.isArray(data.results)) {
-    const headerCols = rows[0].split(",");
-    const emailColumnIndex = headerCols.indexOf("ZeroBounce Email");
-
-    data.results.forEach((result, index) => {
-      const dataRowIndex = index + 1; // Skip header row
-      if (dataRowIndex < rows.length) {
-        const email = result.email || result.emails?.[0] || "";
-        const currentRow = rows[dataRowIndex].split(",");
-
-        if (emailColumnIndex !== -1) {
-          // Update existing "ZeroBounce Email" column
-          currentRow[emailColumnIndex] = email;
-          rows[dataRowIndex] = currentRow.join(",");
-        } else {
-          // Fallback: add new column at end (shouldn't happen due to ensureHeader above)
-          rows[dataRowIndex] = rows[dataRowIndex] + "," + email;
-        }
-      }
-    });
-  }
-
-  return rows;
-}
-
 // ------------------------------
 // Apollo Button Handler
 // ------------------------------
 
-document.getElementById("apollo-button").addEventListener("click", function () {
-  if (!csvRows.length) {
-    alert("Load a CSV first");
-    return;
-  }
-
+function fetchApollo() {
+  document.getElementById("apollo-data").innerText = "Loading...";
   const details = getApolloDetailsFromCsvRows(csvRows);
   console.log("Apollo clicked with details:", details);
 
@@ -356,57 +352,108 @@ document.getElementById("apollo-button").addEventListener("click", function () {
     .catch((error) => {
       console.error("Error:", error);
     });
+}
+
+document.getElementById("apollo-button").addEventListener("click", function () {
+  if (!csvRows.length) {
+    alert("Load a CSV first");
+    return;
+  }
+
+  fetchApollo();
 });
 
 // ------------------------------
 // ZeroBounce Button Handler
 // ------------------------------
 
+function fetchZeroBounce() {
+  document.getElementById("zero-bounce-data").innerText = "Loading...";
+
+  const csvContent = rowsToCsvString(csvRows);
+  const formData = buildZeroBounceFormData(csvContent);
+  const url = "https://bulkapi.zerobounce.net/email-finder/sendfile";
+  fetch(url, {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Zero Bounce Success:", data);
+      enrichedCsvData = applyZeroBounceResultsToCsv(enrichedCsvData, data);
+      displayCsvAsTable(enrichedCsvData);
+      if (data.success) {
+        document.getElementById(
+          "zero-bounce-data"
+        ).innerText = `File submitted successfully. File ID: ${data.file_id}`;
+      } else {
+        document.getElementById("zero-bounce-data").innerText = `Error: ${
+          data.error_message || data.message
+        }`;
+      }
+    })
+    .catch((error) => {
+      console.error("Zero Bounce Error:", error);
+      document.getElementById("zero-bounce-data").innerText =
+        "Error submitting file to Zero Bounce";
+    });
+
+  console.log("Zero Bounce clicked");
+}
+
 document
   .getElementById("zero-bounce-button")
   .addEventListener("click", function () {
-    if (!enrichedCsvData.length) {
-      alert(
-        "No CSV data available. Please load and process data with Apollo first."
-      );
+    if (!csvRows.length) {
+      alert("Load a CSV first");
       return;
     }
 
-    const csvContent = rowsToCsvString(enrichedCsvData);
-    const formData = buildZeroBounceFormData(csvContent);
-    const url = "https://bulkapi.zerobounce.net/email-finder/sendfile";
-
-    fetch(url, {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Zero Bounce Success:", data);
-        enrichedCsvData = applyZeroBounceResultsToCsv(enrichedCsvData, data);
-        displayCsvAsTable(enrichedCsvData);
-        if (data.success) {
-          document.getElementById(
-            "zero-bounce-data"
-          ).innerText = `File submitted successfully. File ID: ${data.file_id}`;
-        } else {
-          document.getElementById("zero-bounce-data").innerText = `Error: ${
-            data.error_message || data.message
-          }`;
-        }
-      })
-      .catch((error) => {
-        console.error("Zero Bounce Error:", error);
-        document.getElementById("zero-bounce-data").innerText =
-          "Error submitting file to Zero Bounce";
-      });
-
-    console.log("Zero Bounce clicked");
+    fetchZeroBounce();
   });
 
 // ------------------------------
 // ContactOut Button Handler
 // ------------------------------
+
+function fetchContactOut() {
+  const profiles = extractLinkedinProfiles(csvRows);
+  const { url, headers, body } = buildContactOutRequest(profiles);
+  document.getElementById("contact-out-data").innerText = "Loading...";  
+  fetch(url, {
+    method: "POST",
+    headers,
+    body,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("ContactOut Success:", data);
+
+      // Initialize enriched data if needed
+      if (!enrichedCsvData.length) {
+        enrichedCsvData = [...csvRows];
+      }
+
+      // Apply ContactOut results and update the enriched CSV
+      enrichedCsvData = applyContactOutResultsToCsv(enrichedCsvData, data);
+
+      // Render the table
+      displayCsvAsTable(enrichedCsvData);
+
+      document.getElementById("contact-out-data").innerText = data.message;
+    })
+    .catch((error) => {
+      console.error("ContactOut Error:", error);
+      document.getElementById(
+        "contact-out-data"
+      ).innerText = `Error: ${error.message}`;
+    });
+}
 
 document
   .getElementById("contact-out-button")
@@ -415,41 +462,17 @@ document
       alert("Load a CSV first");
       return;
     }
+    fetchContactOut();
+  });
 
-    const profiles = extractLinkedinProfiles(csvRows);
-    const { url, headers, body } = buildContactOutRequest(profiles);
-
-    fetch(url, {
-      method: "POST",
-      headers,
-      body,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("ContactOut Success:", data);
-
-        // Initialize enriched data if needed
-        if (!enrichedCsvData.length) {
-          enrichedCsvData = [...csvRows];
-        }
-
-        // Apply ContactOut results and update the enriched CSV
-        enrichedCsvData = applyContactOutResultsToCsv(enrichedCsvData, data);
-
-        // Render the table
-        displayCsvAsTable(enrichedCsvData);
-
-        document.getElementById("contact-out-data").innerText = data.message;
-      })
-      .catch((error) => {
-        console.error("ContactOut Error:", error);
-        document.getElementById(
-          "contact-out-data"
-        ).innerText = `Error: ${error.message}`;
-      });
+document
+  .getElementById("fetch-all-button")
+  .addEventListener("click", function () {
+    if (!csvRows.length) {
+      alert("Load a CSV first");
+      return;
+    }
+    fetchApollo();
+    fetchZeroBounce();
+    fetchContactOut();
   });
