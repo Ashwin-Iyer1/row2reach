@@ -2,6 +2,9 @@
   "name": "Row 2 Reach",
   "version": "1.0.0",
   "main": "app.js",
+  "build": {
+    "extraResources": ["./extraResources/**"]
+  },
   "scripts": {
     "start": "electron app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -21,4 +24,5 @@
     "electron-json-storage": "^4.6.0",
     "papaparse": "^5.5.3"
   }
+  
 }
