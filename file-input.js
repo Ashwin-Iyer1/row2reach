@@ -1,7 +1,7 @@
 function displayCsvAsTable(csv) {
     const rows = csv.split(/\r?\n/).filter(row => row.trim() !== ''); // Split into rows and remove empty lines
     if (rows.length === 0) return;
-
+    window.dispatchEvent(new CustomEvent('csv:rows-updated', { detail: rows }));
     const table = document.createElement('table');
     table.border = '1'; // Basic styling
 
