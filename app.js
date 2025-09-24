@@ -1,59 +1,61 @@
-require('dotenv').config();
-const { app, BrowserWindow, Menu } = require('electron/main')
-const path = require('node:path')
-
-
-const temaplate = [
-  {
-    label: 'File',
-    submenu: [
-      { label: 'quit',
-        click() {
-          app.quit()
-        }
-       }
-    ]
-  },
-  {label: "Developer",
-  submenu: [
-    { label: 'toggledevtools',
-      click() {
-        console.log("Toggle dev tools")
-        BrowserWindow.getFocusedWindow().toggleDevTools()
-      }
-     },
-  ]}
-  
-]
+const { app, BrowserWindow, Menu } = require('electron');
+const path = require('node:path');
 
 function createWindow () {
-    const win = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1000,
     height: 700,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js') // If using a preload script
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
     }
-  })
+  });
 
-  const menu = Menu.buildFromTemplate(temaplate)
-  Menu.setApplicationMenu(menu)
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Quit',
+          click() {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: 'Developer',
+      submenu: [
+        {
+          label: 'Toggle DevTools',
+          click() {
+            BrowserWindow.getFocusedWindow().toggleDevTools();
+          }
+        }
+      ]
+    }
+  ];
 
+  const menu = Menu.buildFromTemplate(template);
+  // Menu.setApplicationMenu(menu);
 
-  win.loadFile('index.html')
+  win.loadFile('index.html');
 }
 
 app.whenReady().then(() => {
-  createWindow()
+  createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createWindow();
     }
-  })
-})
+  });
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit()
+    app.quit();
   }
-})
+});

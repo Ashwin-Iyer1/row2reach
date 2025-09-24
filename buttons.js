@@ -1,7 +1,6 @@
 // ------------------------------
 // CSV Table Rendering Utilities
 // ------------------------------
-
 /**
  * Normalize CSV input to an array of non-empty row strings.
  * Accepts either a CSV string or an array of rows and filters out empty lines.
@@ -124,17 +123,19 @@ function getApolloDetailsFromCsvRows(rows) {
 /**
  * Build Apollo API request pieces (url, headers, body) using details.
  */
-function buildApolloRequest(details) {
+async function buildApolloRequest(details) {
   const url =
     "https://api.apollo.io/api/v1/people/bulk_match?reveal_personal_emails=false&reveal_phone_number=false";
-  const headers = {
-    accept: "application/json",
-    "Cache-Control": "no-cache",
-    "Content-Type": "application/json",
-    "x-api-key": window.env.electron_key,
-  };
-  const body = JSON.stringify({ details });
-  return { url, headers, body };
+  const object = await window.electronAPI.getKeys();
+  console.log("Using Apollo key:", object.APOLLO_KEY);
+    const headers = {
+      accept: "application/json",
+      "Cache-Control": "no-cache",
+      "Content-Type": "application/json",
+      "x-api-key": object.APOLLO_KEY, // use stored key
+    };
+    const body = JSON.stringify({ details });
+    return { url, headers, body };
 }
 
 /**
@@ -207,19 +208,22 @@ function rowsToCsvString(rows) {
 /**
  * Build FormData for ZeroBounce bulk email finder.
  */
-function buildZeroBounceFormData(csvContent) {
+async function buildZeroBounceFormData(csvContent) {
   const blob = new Blob([csvContent], { type: "text/csv" });
+
+  // 🔑 fetch key from preload storage
+  const object = await window.electronAPI.getKeys();
+  console.log("Using ZeroBounce key:", object.ZEROBOUNCE_KEY);
 
   const formData = new FormData();
   formData.append("file", blob, "enriched_data.csv");
-  formData.append("api_key", window.env.zerobounce_key);
+  formData.append("api_key", object.ZEROBOUNCE_KEY);
   formData.append("domain_column", "2"); // Organization column (1-indexed)
   formData.append("full_name_column", "1"); // Name column (1-indexed)
   formData.append("has_header_row", "true");
 
   return formData;
 }
-
 function applyZeroBounceResultsToCsv(originalRows, data) {
   let rows = [...originalRows];
 
@@ -271,12 +275,18 @@ function extractLinkedinProfiles(rows) {
 /**
  * Build ContactOut API request pieces (url, headers, body).
  */
-function buildContactOutRequest(profiles) {
+
+async function buildContactOutRequest(profiles) {
   const url = "https://api.contactout.com/v1/people/linkedin/batch";
+
+  // 🔑 get stored keys from preload
+  const object = await window.electronAPI.getKeys();
+  console.log("Using ContactOut key:", object.CONTACTOUT_KEY);
+
   const headers = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    token: `${window.env.contactout_key}`,
+    token: object.CONTACTOUT_KEY,
   };
   const body = JSON.stringify({ profiles });
   return { url, headers, body };
@@ -321,28 +331,24 @@ function applyContactOutResultsToCsv(originalRows, data) {
 // Apollo Button Handler
 // ------------------------------
 
-function fetchApollo() {
+async function fetchApollo() {
   document.getElementById("apollo-data").innerText = "Loading...";
   const details = getApolloDetailsFromCsvRows(csvRows);
   console.log("Apollo clicked with details:", details);
 
-  const { url, headers, body } = buildApolloRequest(details);
+  // ✅ await async buildApolloRequest
+  const { url, headers, body } = await buildApolloRequest(details);
 
   fetch(url, { method: "POST", headers, body })
     .then((response) => response.json())
     .then((data) => {
       console.log("Success:", data);
 
-      // Normalize response to a matches list (array)
       const matchesList = Array.isArray(data) ? data : data.matches || [];
-
-      // Create enriched CSV with Apollo emails (preserves existing logic)
       enrichedCsvData = applyApolloMatchesToCsv(csvRows, matchesList);
 
-      // Render table from enriched data
       displayCsvAsTable(enrichedCsvData);
 
-      // Show list of found emails
       const emails = extractEmailsFromMatches(matchesList);
       const emailText =
         emails.length > 0 ? emails.join(", ") : "No emails found";
@@ -353,6 +359,7 @@ function fetchApollo() {
       console.error("Error:", error);
     });
 }
+
 
 document.getElementById("apollo-button").addEventListener("click", function () {
   if (!csvRows.length) {
@@ -367,11 +374,14 @@ document.getElementById("apollo-button").addEventListener("click", function () {
 // ZeroBounce Button Handler
 // ------------------------------
 
-function fetchZeroBounce() {
+async function fetchZeroBounce() {
   document.getElementById("zero-bounce-data").innerText = "Loading...";
 
   const csvContent = rowsToCsvString(csvRows);
-  const formData = buildZeroBounceFormData(csvContent);
+
+  // ✅ await formData builder
+  const formData = await buildZeroBounceFormData(csvContent);
+
   const url = "https://bulkapi.zerobounce.net/email-finder/sendfile";
   fetch(url, {
     method: "POST",
@@ -382,6 +392,7 @@ function fetchZeroBounce() {
       console.log("Zero Bounce Success:", data);
       enrichedCsvData = applyZeroBounceResultsToCsv(enrichedCsvData, data);
       displayCsvAsTable(enrichedCsvData);
+
       if (data.success) {
         document.getElementById(
           "zero-bounce-data"
@@ -401,6 +412,7 @@ function fetchZeroBounce() {
   console.log("Zero Bounce clicked");
 }
 
+
 document
   .getElementById("zero-bounce-button")
   .addEventListener("click", function () {
@@ -416,10 +428,13 @@ document
 // ContactOut Button Handler
 // ------------------------------
 
-function fetchContactOut() {
+async function fetchContactOut() {
   const profiles = extractLinkedinProfiles(csvRows);
-  const { url, headers, body } = buildContactOutRequest(profiles);
   document.getElementById("contact-out-data").innerText = "Loading...";  
+
+  // ✅ await async request builder
+  const { url, headers, body } = await buildContactOutRequest(profiles);
+
   fetch(url, {
     method: "POST",
     headers,
@@ -434,18 +449,16 @@ function fetchContactOut() {
     .then((data) => {
       console.log("ContactOut Success:", data);
 
-      // Initialize enriched data if needed
       if (!enrichedCsvData.length) {
         enrichedCsvData = [...csvRows];
       }
 
-      // Apply ContactOut results and update the enriched CSV
       enrichedCsvData = applyContactOutResultsToCsv(enrichedCsvData, data);
 
-      // Render the table
       displayCsvAsTable(enrichedCsvData);
 
-      document.getElementById("contact-out-data").innerText = data.message;
+      document.getElementById("contact-out-data").innerText =
+        data.message || "ContactOut request completed";
     })
     .catch((error) => {
       console.error("ContactOut Error:", error);
@@ -454,6 +467,7 @@ function fetchContactOut() {
       ).innerText = `Error: ${error.message}`;
     });
 }
+
 
 document
   .getElementById("contact-out-button")

@@ -8,3 +8,6 @@
 *.pem
 *.crt
 *.p12
+/extraResources/userKeys.json
+
+/release-builds
