@@ -314,6 +314,11 @@ async function fetchApollo() {
   fetch(url, { method: "POST", headers, body })
     .then((response) => response.json())
     .then((data) => {
+      if (data.error) {
+        replaceText("apollo-data", data.error);
+        return;
+      }
+
       console.log("Success:", data);
 
       const matchesList = Array.isArray(data) ? data : data.matches || [];
