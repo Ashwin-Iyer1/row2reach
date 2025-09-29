@@ -52,6 +52,8 @@ function renderTable(table) {
   const container = document.getElementById("table-container");
   container.innerHTML = ""; // Clear previous content
   container.appendChild(table);
+  const download_csv_button = document.getElementById("download-csv-button");
+  download_csv_button.style.display = "inline-block"; // Show download button
 }
 
 /**

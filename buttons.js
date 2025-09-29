@@ -55,7 +55,10 @@ function renderTable(table) {
   const container = document.getElementById("table-container");
   container.innerHTML = ""; // Clear previous content
   container.appendChild(table);
+  const download_csv_button = document.getElementById("download-csv-button");
+  download_csv_button.style.display = "inline-block"; // Show download button
 }
+
 
 /**
  * Dispatch a custom event that CSV rows have been updated.
@@ -110,12 +113,22 @@ const replaceText = (selector, text) => {
  * Convert CSV rows (excluding header) to Apollo "details" objects.
  */
 function getApolloDetailsFromCsvRows(rows) {
+  if (rows.length < 2) return []; // Need at least header + 1 data row
+  
+  const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
+  
+  // Find column indices by looking for keywords
+  const nameIndex = headers.findIndex(h => h.includes("name"));
+  const organizationIndex = headers.findIndex(h => h.includes("organization"));
+  const linkedinIndex = headers.findIndex(h => h.includes("linkedin"));
+  
   return rows.slice(1).map((line) => {
-    const [name, domain, organization, linkedin] = line.split(",");
+    const columns = line.split(",").map(col => col.trim());
+    
     return {
-      name: name?.trim(),
-      organization_name: organization?.trim(),
-      linkedin_url: linkedin?.trim(),
+      name: nameIndex >= 0 ? columns[nameIndex] : undefined,
+      organization_name: organizationIndex >= 0 ? columns[organizationIndex] : undefined,
+      linkedin_url: linkedinIndex >= 0 ? columns[linkedinIndex] : undefined,
     };
   });
 }
@@ -194,9 +207,6 @@ function extractEmailsFromMatches(matchesList) {
   return matchesList.filter((m) => m && m.email).map((m) => m.email);
 }
 
-// ------------------------------
-// ZeroBounce Helpers
-// ------------------------------
 
 /**
  * Convert array of CSV rows back into a CSV string.
@@ -204,57 +214,6 @@ function extractEmailsFromMatches(matchesList) {
 function rowsToCsvString(rows) {
   return rows.join("\n");
 }
-
-/**
- * Build FormData for ZeroBounce bulk email finder.
- */
-async function buildZeroBounceFormData(csvContent) {
-  const blob = new Blob([csvContent], { type: "text/csv" });
-
-  // 🔑 fetch key from preload storage
-  const object = await window.electronAPI.getKeys();
-  console.log("Using ZeroBounce key:", object.ZEROBOUNCE_KEY);
-
-  const formData = new FormData();
-  formData.append("file", blob, "enriched_data.csv");
-  formData.append("api_key", object.ZEROBOUNCE_KEY);
-  formData.append("domain_column", "2"); // Organization column (1-indexed)
-  formData.append("full_name_column", "1"); // Name column (1-indexed)
-  formData.append("has_header_row", "true");
-
-  return formData;
-}
-function applyZeroBounceResultsToCsv(originalRows, data) {
-  let rows = [...originalRows];
-
-  // Ensure "ZeroBounce Email" column exists
-  rows = ensureHeader(rows, "ZeroBounce Email");
-
-  if (data.results && Array.isArray(data.results)) {
-    const headerCols = rows[0].split(",");
-    const emailColumnIndex = headerCols.indexOf("ZeroBounce Email");
-
-    data.results.forEach((result, index) => {
-      const dataRowIndex = index + 1; // Skip header row
-      if (dataRowIndex < rows.length) {
-        const email = result.email || result.emails?.[0] || "";
-        const currentRow = rows[dataRowIndex].split(",");
-
-        if (emailColumnIndex !== -1) {
-          // Update existing "ZeroBounce Email" column
-          currentRow[emailColumnIndex] = email;
-          rows[dataRowIndex] = currentRow.join(",");
-        } else {
-          // Fallback: add new column at end (shouldn't happen due to ensureHeader above)
-          rows[dataRowIndex] = rows[dataRowIndex] + "," + email;
-        }
-      }
-    });
-  }
-
-  return rows;
-}
-
 // ------------------------------
 // ContactOut Helpers
 // ------------------------------
@@ -263,14 +222,19 @@ function applyZeroBounceResultsToCsv(originalRows, data) {
  * Extract LinkedIn profile URLs from CSV rows (skipping header).
  */
 function extractLinkedinProfiles(rows) {
-  return rows
-    .slice(1)
-    .map((line) => {
-      const [name, domain, organization, linkedin] = line.split(",");
-      return linkedin?.trim();
-    })
-    .filter((profile) => profile);
-}
+ if (rows.length < 2) return []; // Need at least header + 1 data row
+  
+const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
+
+const linkedinIndex = headers.findIndex(h => h.includes("linkedin"));
+
+return rows
+  .slice(1)
+  .map((line) => {
+    const columns = line.split(",").map(col => col.trim());
+    return linkedinIndex >= 0 ? columns[linkedinIndex] : undefined;
+  })
+  .filter((profile) => profile);}
 
 /**
  * Build ContactOut API request pieces (url, headers, body).
@@ -302,26 +266,34 @@ function applyContactOutResultsToCsv(originalRows, data) {
   // Ensure "ContactOut Email" column exists
   rows = ensureHeader(rows, "ContactOut Email");
 
-  if (data.results && Array.isArray(data.results)) {
+  if (data.profiles && typeof data.profiles === 'object') {
     const headerCols = rows[0].split(",");
     const emailColumnIndex = headerCols.indexOf("ContactOut Email");
+    const linkedinColumnIndex = headerCols.findIndex(header => 
+      header.toLowerCase().includes("linkedin")
+    );
 
-    data.results.forEach((result, index) => {
-      const dataRowIndex = index + 1; // Skip header row
-      if (dataRowIndex < rows.length) {
-        const email = result.email || result.emails?.[0] || "";
-        const currentRow = rows[dataRowIndex].split(",");
-
+    // Process each data row (skip header)
+    for (let i = 1; i < rows.length; i++) {
+      const currentRow = rows[i].split(",");
+      
+      if (linkedinColumnIndex !== -1 && linkedinColumnIndex < currentRow.length) {
+        const linkedinUrl = currentRow[linkedinColumnIndex].trim();
+        
+        // Find matching profile in ContactOut response
+        const emails = data.profiles[linkedinUrl] || [];
+        const email = emails.length > 0 ? emails[0] : ""; // Use first email if multiple
+        
         if (emailColumnIndex !== -1) {
           // Update existing "ContactOut Email" column
           currentRow[emailColumnIndex] = email;
-          rows[dataRowIndex] = currentRow.join(",");
+          rows[i] = currentRow.join(",");
         } else {
           // Fallback: add new column at end (shouldn't happen due to ensureHeader above)
-          rows[dataRowIndex] = rows[dataRowIndex] + "," + email;
+          rows[i] = rows[i] + "," + email;
         }
       }
-    });
+    }
   }
 
   return rows;
@@ -369,60 +341,6 @@ document.getElementById("apollo-button").addEventListener("click", function () {
 
   fetchApollo();
 });
-
-// ------------------------------
-// ZeroBounce Button Handler
-// ------------------------------
-
-async function fetchZeroBounce() {
-  document.getElementById("zero-bounce-data").innerText = "Loading...";
-
-  const csvContent = rowsToCsvString(csvRows);
-
-  // ✅ await formData builder
-  const formData = await buildZeroBounceFormData(csvContent);
-
-  const url = "https://bulkapi.zerobounce.net/email-finder/sendfile";
-  fetch(url, {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("Zero Bounce Success:", data);
-      enrichedCsvData = applyZeroBounceResultsToCsv(enrichedCsvData, data);
-      displayCsvAsTable(enrichedCsvData);
-
-      if (data.success) {
-        document.getElementById(
-          "zero-bounce-data"
-        ).innerText = `File submitted successfully. File ID: ${data.file_id}`;
-      } else {
-        document.getElementById("zero-bounce-data").innerText = `Error: ${
-          data.error_message || data.message
-        }`;
-      }
-    })
-    .catch((error) => {
-      console.error("Zero Bounce Error:", error);
-      document.getElementById("zero-bounce-data").innerText =
-        "Error submitting file to Zero Bounce";
-    });
-
-  console.log("Zero Bounce clicked");
-}
-
-
-document
-  .getElementById("zero-bounce-button")
-  .addEventListener("click", function () {
-    if (!csvRows.length) {
-      alert("Load a CSV first");
-      return;
-    }
-
-    fetchZeroBounce();
-  });
 
 // ------------------------------
 // ContactOut Button Handler
@@ -487,6 +405,27 @@ document
       return;
     }
     fetchApollo();
-    fetchZeroBounce();
     fetchContactOut();
+  });
+
+
+document
+  .getElementById("download-csv-button")
+  .addEventListener("click", function () {
+    var csvString;
+    if (!enrichedCsvData.length) {
+      csvString = rowsToCsvString(csvRows);
+    }
+
+    csvString = rowsToCsvString(enrichedCsvData);
+    const blob = new Blob([csvString], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "enriched_data.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
