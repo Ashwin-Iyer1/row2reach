@@ -7,11 +7,33 @@
  * Accepts either a CSV string or an array of rows and filters out empty lines.
  */
 function normalizeCsvRows(csv) {
+  let rows;
+
   if (Array.isArray(csv)) {
-    return csv.filter((row) => row.trim() !== "");
+    rows = csv.filter((row) => row.trim() !== "");
+  } else {
+    rows = csv.split(/\r?\n/).filter((row) => row.trim() !== "");
   }
-  return csv.split(/\r?\n/).filter((row) => row.trim() !== "");
+
+  // 🛠 Fix for "bad" one-liner input
+  if (rows.length === 1 && rows[0].includes("ContactOut Email,")) {
+    const parts = rows[0].split(",");
+    const header = parts.slice(0, 4).join(",");
+    const data = parts.slice(4);
+
+    const fixedRows = [header];
+    for (let i = 0; i < data.length; i += 4) {
+      const chunk = data.slice(i, i + 4);
+      if (chunk.length) {
+        fixedRows.push(chunk.join(","));
+      }
+    }
+    rows = fixedRows;
+  }
+
+  return rows;
 }
+
 
 /**
  * Build a <table> element from CSV rows (first row is header).
@@ -93,7 +115,7 @@ let enrichedCsvData = []; // Store the enriched data
 window.addEventListener("csv:rows-updated", (e) => {
   csvRows = e.detail;
   enrichedCsvData = [...csvRows]; // Initialize with original CSV data
-  console.log("CSV rows updated:", csvRows);
+  console.log("CSV rows updated:", enrichedCsvData);
 });
 
 // ------------------------------
@@ -467,6 +489,15 @@ document
       return;
     }
     console.log("Emails to send:", emails);
+    localStorage.setItem('emails', JSON.stringify(emails));
+    localStorage.setItem('emailsAsCsv', enrichedCsvData);
     window.electronAPI.navigateTo("emails.html");
-
   });
+
+  window.addEventListener("DOMContentLoaded", () => {
+    if(localStorage.getItem('emailsAsCsv')) {
+      const localData = localStorage.getItem('emailsAsCsv');
+      enrichedCsvData = normalizeCsvRows(localData);
+      displayCsvAsTable(enrichedCsvData);
+    }
+});

@@ -369,3 +369,261 @@ min-width: 100%;
 }
 }
 
+/* Emails page specific styles */
+.emails-container {
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.content {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.variables-section {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* Back button */
+#back-arrow-button {
+  appearance: none;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  backdrop-filter: saturate(1.2) blur(14px);
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+#back-arrow-button:hover {
+  transform: translateY(-1px);
+  background: rgba(var(--card-rgb), 0.9);
+  box-shadow: var(--shadow-md);
+}
+
+#back-arrow-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 6px var(--ring);
+}
+
+/* Email form */
+#emailForm {
+  background: var(--card-bg);
+  backdrop-filter: saturate(1.2) blur(14px);
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+#emailForm label {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+#emailForm input[type="text"],
+#emailForm textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: rgba(var(--card-rgb), 0.8);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#preview-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: rgba(var(--card-rgb), 0.8);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#emailForm input[type="text"]:focus,
+#emailForm textarea:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 6px var(--ring);
+}
+
+#emailForm textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+#emailForm button[type="submit"] {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 15px;
+  color: white;
+  padding: 13px 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.34);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+#emailForm button[type="submit"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px #4f46e56b;
+}
+
+#emailForm button[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.32);
+}
+
+/* Preview button */
+#preview-button {
+  appearance: none;
+  border: 1px solid var(--brand-500);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--brand-600);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 22px;
+  border-radius: 999px;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  margin-top: 12px;
+}
+
+#preview-button:hover {
+  transform: translateY(-1px);
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+}
+
+#preview-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 6px var(--ring);
+}
+
+/* Preview list */
+#preview-list {
+  background: var(--card-bg);
+  backdrop-filter: saturate(1.2) blur(14px);
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-md);
+  margin-top: 16px;
+  min-height: 60px;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+#preview-list:empty::before {
+  content: "Email preview will appear here...";
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Variables section */
+.variables-section {
+  background: var(--card-bg);
+  backdrop-filter: saturate(1.2) blur(14px);
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.variables-header h2 {
+  margin: 0 0 16px 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+#variables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.variable-item {
+  padding: 10px 12px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  color: var(--brand-600);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.variable-item:hover {
+  background: rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Emails list */
+#emails-list {
+  background: var(--card-bg);
+  backdrop-filter: saturate(1.2) blur(14px);
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-md);
+  min-height: 100px;
+}
+
+#emails-list:empty::before {
+  content: "Email recipients will appear here...";
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Responsive design for emails page */
+@media (max-width: 960px) {
+  .emails-container {
+    flex-direction: column;
+  }
+  
+  .variables-section {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 680px) {
+  .emails-container {
+    gap: 16px;
+  }
+  
+  #emailForm {
+    padding: 20px;
+  }
+  
+  .variables-section {
+    padding: 20px;
+  }
+}

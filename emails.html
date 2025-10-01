@@ -12,14 +12,56 @@
   </head>
   <body>
     <main class="container">
+      <button
+        id="back-arrow-button"
+        style="
+          width: 20px;
+          height: 20px;
+          text-align: center;
+          align-items: center;
+          justify-content: center;
+          display: flex;
+        "
+      >
+        &larr;
+      </button>
       <header class="app-header">
         <div class="brand">
           <div class="brand-logo" aria-hidden="true"></div>
           <h1>Emails</h1>
         </div>
       </header>
+            <div id="table-container"></div>
+
+      <div
+        class="emails-container"
+        style="display: flex; justify-content: space-between"
+      >
+        <section class="content">
+          <div id="emails-list"></div>
+          <form id="emailForm" style="width: 100%">
+            <div>
+              <label for="subject">Subject:</label>
+              <input type="text" id="subject" /><br /><br />
+            </div>
+            <div>
+              <label for="body">Message:</label>
+              <textarea id="body"></textarea><br /><br />
+            </div>
+            <button type="submit">Send Email</button>
+          </form>
+          <button id="preview-button"type="submit">Preview</button>
+          <div id="preview-list"></div>
+        </section>
+        <section class="variables-section">
+          <div class="variables-header" style="text-align: center">
+            <h2>Available Variables</h2>
+            <div id="variables-list"></div>
+          </div>
+        </section>
+      </div>
     </main>
     <script src="file-input.js"></script>
-    <script src="buttons.js"></script>
+    <script src="emails-buttons.js"></script>
   </body>
 </html>
