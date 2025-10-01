@@ -1,48 +1,28 @@
-const { app, BrowserWindow, Menu } = require('electron');
-const path = require('node:path');
+const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("node:path");
+
+let win;
 
 function createWindow () {
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 1000,
     height: 700,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false,
       sandbox: false
     }
   });
-
-  const template = [
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'Quit',
-          click() {
-            app.quit();
-          }
-        }
-      ]
-    },
-    {
-      label: 'Developer',
-      submenu: [
-        {
-          label: 'Toggle DevTools',
-          click() {
-            BrowserWindow.getFocusedWindow().toggleDevTools();
-          }
-        }
-      ]
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  // Menu.setApplicationMenu(menu);
-
   win.loadFile('index.html');
 }
+ipcMain.on("navigate-to", (event, page) => {
+  if (win) {
+    win.loadFile(page);
+  }
+});
+
+
+
 
 app.whenReady().then(() => {
   createWindow();

@@ -1,3 +1,4 @@
+
 // ------------------------------
 // CSV Table Rendering Utilities
 // ------------------------------
@@ -56,6 +57,8 @@ function renderTable(table) {
   container.innerHTML = ""; // Clear previous content
   container.appendChild(table);
   const download_csv_button = document.getElementById("download-csv-button");
+  const email_users_button = document.getElementById("email-users-button");
+  email_users_button.style.display = "inline-block"; // Show email users button
   download_csv_button.style.display = "inline-block"; // Show download button
 }
 
@@ -433,4 +436,37 @@ document
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  });
+
+
+
+document
+  .getElementById("email-users-button")
+  .addEventListener("click", function () {
+    if (!enrichedCsvData.length) {
+      alert("No enriched data to email.");
+      return;
+    }
+    
+    // Extract emails from the enriched CSV data
+    const rows = normalizeCsvRows(enrichedCsvData);
+    const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
+    const emailIndex = headers.findIndex(h => h.includes("email"));
+    if (emailIndex === -1) {
+      alert("No email column found in the data.");
+      return;
+    }
+    
+    const emails = rows.slice(1).map(row => {
+      const cols = row.split(",").map(col => col.trim());
+      return cols[emailIndex];
+    }).filter(email => email);
+    
+    if (emails.length === 0) {
+      alert("No emails found to send.");
+      return;
+    }
+    console.log("Emails to send:", emails);
+    window.electronAPI.navigateTo("emails.html");
+
   });

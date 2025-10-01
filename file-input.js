@@ -53,6 +53,8 @@ function renderTable(table) {
   container.innerHTML = ""; // Clear previous content
   container.appendChild(table);
   const download_csv_button = document.getElementById("download-csv-button");
+  const email_users_button = document.getElementById("email-users-button");
+  email_users_button.style.display = "inline-block"; // Show email users button
   download_csv_button.style.display = "inline-block"; // Show download button
 }
 

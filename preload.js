@@ -1,14 +1,13 @@
-const { contextBridge } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 const storage = require("electron-json-storage");
 const path = require('path');
-
-const configFilePath = path.join(__dirname, 'data', 'config.json');
 
 // optional: set a custom storage folder
 storage.setDataPath(path.join(__dirname, 'data'));
 console.log('Storage path:', storage.getDataPath());
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  navigateTo: (page) => ipcRenderer.send("navigate-to", page),
   getKeys: () =>
     new Promise((resolve, reject) => {
       storage.get("config", (error, data) => {
