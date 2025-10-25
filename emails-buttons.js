@@ -199,11 +199,10 @@ document
               break;
             }
           }
-          console.log(recipient);
 
           // Send the email data to main process
           window.electronAPI.sendMessage("send-email", {
-            recipient: "ashwiniyer06@gmail.com",
+            recipient: recipient,
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
@@ -228,9 +227,28 @@ document
         const textarea = document.createElement("textarea");
         textarea.id = `preview-textarea`;
         textarea.value = formattedText;
+        const emailHeaderIndexes = headers
+          .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
+          .filter((i) => i !== -1);
+
+        // Loop through those columns and pick the first filled one
+        let recipient = "";
+        for (const i of emailHeaderIndexes) {
+          const value = (dataRow[i] || "").trim();
+          if (value) {
+            recipient = value;
+            break;
+          }
+        }
+
+        const recipientEmail = recipient || "";
+        const recipientEmailText = document.createElement("p");
+        recipientEmailText.textContent = `Recipient: ${recipientEmail}`;
+        recipientEmailText.style.fontWeight = "bold";
 
         preview_list.appendChild(parentDiv);
         parentDiv.appendChild(label);
+        parentDiv.appendChild(recipientEmailText);
         parentDiv.appendChild(subjectPreview);
         parentDiv.appendChild(textarea);
       }

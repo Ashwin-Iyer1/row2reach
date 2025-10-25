@@ -472,7 +472,7 @@ min-width: 100%;
   line-height: 1.5;
 }
 
-#emailForm button[type="submit"] {
+#sendEmailButton {
   appearance: none;
   border: 0;
   cursor: pointer;
@@ -486,18 +486,18 @@ min-width: 100%;
   transition: transform 0.12s ease, box-shadow 0.2s ease;
 }
 
-#emailForm button[type="submit"]:hover {
+#sendEmailButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 16px 34px #4f46e56b;
 }
 
-#emailForm button[type="submit"]:active {
+#sendEmailButton:active {
   transform: translateY(0);
   box-shadow: 0 6px 18px rgba(79, 70, 229, 0.32);
 }
 
 /* Preview button */
-#preview-button {
+#preview-button{
   appearance: none;
   border: 1px solid var(--brand-500);
   background: rgba(99, 102, 241, 0.08);
@@ -511,15 +511,29 @@ min-width: 100%;
   margin-top: 12px;
 }
 
-#preview-button:hover {
+#preview-button:hover{
   transform: translateY(-1px);
   background: rgba(99, 102, 241, 0.12);
   box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
 }
 
-#preview-button:focus-visible {
+#preview-button:focus-visible{
   outline: none;
   box-shadow: 0 0 0 6px var(--ring);
+}
+
+#signIn {
+  appearance: none;
+  border: 1px solid #63f190;
+  background: rgba(99, 102, 241, 0.08);
+  color: #54ee92;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 22px;
+  border-radius: 999px;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  margin-top: 12px;
 }
 
 /* Preview list */
