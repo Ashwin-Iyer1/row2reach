@@ -107,6 +107,24 @@ document
     window.electronAPI.navigateTo("index.html");
   });
 
+const signInButton = document.getElementById("signIn");
+// UI event handlers
+signInButton.addEventListener("click", () => {
+  window.electronAPI.sendLoginMessage();
+});
+
+window.electronAPI.onHideButton((event, message) => {
+  if (message === "hide") {
+    console.log('Received "hide" message. Hiding button.');
+    signInButton.style.display = "none"; // Hide the button
+    const sendEmailButtons = document.querySelectorAll(".send-email-button");
+    if (sendEmailButtons.length !== 0) {
+      sendEmailButtons.forEach((btn) => {
+        btn.style.display = "block";
+      });
+    }
+  }
+});
 
 document
   .getElementById("preview-button")
@@ -114,50 +132,107 @@ document
     const textInput = document.getElementById("body").value;
     const subjectInput = document.getElementById("subject").value;
     const preview_list = document.getElementById("preview-list");
-    
+
     // Clear previous previews
     preview_list.innerHTML = "";
-    
+
     // Get all data rows (skip header at index 0)
     if (enrichedCsvData && enrichedCsvData.length > 1) {
-      const headers = enrichedCsvData[0].split(",").map(h => h.trim());
-      
+      const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
+
       // Process each data row
       for (let i = 1; i < enrichedCsvData.length; i++) {
-        const dataRow = enrichedCsvData[i].split(",").map(d => d.trim());
-        
+        const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+
         let formattedText = textInput;
         let formattedSubject = subjectInput;
-        
+
         // Replace each variable with corresponding data for this row
         headers.forEach((header, index) => {
           const variable = `{${header}}`;
-          const value = dataRow[index] || '';
-          formattedText = formattedText.replace(new RegExp(escapeRegExp(variable), 'g'), value);
-          formattedSubject = formattedSubject.replace(new RegExp(escapeRegExp(variable), 'g'), value);
+          const value = dataRow[index] || "";
+          formattedText = formattedText.replace(
+            new RegExp(escapeRegExp(variable), "g"),
+            value
+          );
+          formattedSubject = formattedSubject.replace(
+            new RegExp(escapeRegExp(variable), "g"),
+            value
+          );
         });
-        
+
         // Add a label to identify which row this preview is for
+        const parentDiv = document.createElement("div");
+        parentDiv.style.marginBottom = "15px";
+        parentDiv.style.border = "1px solid #ccc";
+        parentDiv.style.padding = "10px";
+        parentDiv.style.borderRadius = "5px";
+
         const label = document.createElement("div");
         label.style.fontWeight = "bold";
         label.style.marginBottom = "5px";
-        label.textContent = `Preview for Row ${i}:`;
-        
+        label.style.display = "flex";
+        label.style.justifyContent = "space-between";
+
+        const previewText = document.createElement("p");
+        previewText.textContent = `Preview for Row ${i}:`;
+
+        const sendEmailButton = document.createElement("button");
+        sendEmailButton.id = "sendEmailButton";
+        sendEmailButton.textContent = "Create Email Draft";
+        sendEmailButton.className = "send-email-button";
+        sendEmailButton.style.display =
+          signInButton.style.display == "none" ? "block" : "none";
+
+        sendEmailButton.onclick = () => {
+          // Example: assume one column is called "Email" in your CSV
+          const emailHeaderIndexes = headers
+            .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
+            .filter((i) => i !== -1);
+
+          // Loop through those columns and pick the first filled one
+          let recipient = "";
+          for (const i of emailHeaderIndexes) {
+            const value = (dataRow[i] || "").trim();
+            if (value) {
+              recipient = value;
+              break;
+            }
+          }
+          console.log(recipient);
+
+          // Send the email data to main process
+          window.electronAPI.sendMessage("send-email", {
+            recipient: "ashwiniyer06@gmail.com",
+            subject: formattedSubject,
+            body: formattedText,
+            importance: "Normal",
+          });
+
+          // Optional UI feedback
+          sendEmailButton.textContent = "Sent!";
+          sendEmailButton.disabled = true;
+        };
+
+        label.appendChild(previewText);
+        label.appendChild(sendEmailButton);
+
         // Create a p element for the subject preview
         const subjectPreview = document.createElement("p");
         subjectPreview.style.fontWeight = "bold";
         subjectPreview.style.marginBottom = "5px";
         subjectPreview.style.padding = "5px";
         subjectPreview.textContent = `${formattedSubject}`;
-        
+
         // Create a textarea for this row's body preview
         const textarea = document.createElement("textarea");
         textarea.id = `preview-textarea`;
         textarea.value = formattedText;
-        
-        preview_list.appendChild(label);
-        preview_list.appendChild(subjectPreview);
-        preview_list.appendChild(textarea);
+
+        preview_list.appendChild(parentDiv);
+        parentDiv.appendChild(label);
+        parentDiv.appendChild(subjectPreview);
+        parentDiv.appendChild(textarea);
       }
     } else {
       // If no CSV data, show message
@@ -165,10 +240,10 @@ document
       message.textContent = "No CSV data available for preview";
       preview_list.appendChild(message);
     }
-  });// Helper function to escape special regex characters
+  }); // Helper function to escape special regex characters
 function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}// on page load, get emails from local storage and populate the textarea
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+} // on page load, get emails from local storage and populate the textarea
 window.addEventListener("DOMContentLoaded", () => {
   const emails = JSON.parse(localStorage.getItem("emails") || "[]");
   const emailsList = document.getElementById("emails-list");
