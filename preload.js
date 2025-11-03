@@ -10,21 +10,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sendMessage: (channel, data) => {
     ipcRenderer.send(channel, data);
   },
-  onHideButton: (callback) => ipcRenderer.on('hide-button-message', callback),
+  onHideButton: (callback) => ipcRenderer.on("hide-button-message", callback),
 
   getKeys: () =>
     new Promise((resolve, reject) => {
-      storage.get("config", (error, data) => {
-        if (error) reject(error);
-        else resolve(data);
-      });
-    }),
-
-  saveKeys: (keys) =>
-    new Promise((resolve, reject) => {
-      storage.set("config", keys, (error) => {
-        if (error) reject(error);
-        else resolve();
+      const fs = require("fs");
+      const configPath = path.join(__dirname, "data", "config.json");
+      fs.readFile(configPath, "utf8", (err, fileContents) => {
+        if (!err) {
+          try {
+            const parsed = JSON.parse(fileContents);
+            return resolve(parsed);
+          } catch (parseErr) {
+            console.warn(
+              "Failed to parse data/config.json from app folder:",
+              parseErr
+            );
+            // fall through to storage fallback
+          }
+        }
+        // fallback to electron-json-storage
+        storage.get("data/config.json", (error, data) => {
+          if (error) return reject(error);
+          resolve(data);
+        });
       });
     }),
 });

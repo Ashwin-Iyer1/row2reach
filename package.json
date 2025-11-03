@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@azure/msal-browser": "^4.25.1",
-    "@azure/msal-node": "^3.8.0",
+    "@azure/msal-node": "^3.8.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@types/papaparse": "^5.3.16",
     "dotenv": "^17.2.2",

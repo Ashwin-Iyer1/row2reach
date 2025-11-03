@@ -1,4 +1,3 @@
-
 // ------------------------------
 // CSV Table Rendering Utilities
 // ------------------------------
@@ -33,7 +32,6 @@ function normalizeCsvRows(csv) {
 
   return rows;
 }
-
 
 /**
  * Build a <table> element from CSV rows (first row is header).
@@ -83,7 +81,6 @@ function renderTable(table) {
   email_users_button.style.display = "inline-block"; // Show email users button
   download_csv_button.style.display = "inline-block"; // Show download button
 }
-
 
 /**
  * Dispatch a custom event that CSV rows have been updated.
@@ -139,20 +136,23 @@ const replaceText = (selector, text) => {
  */
 function getApolloDetailsFromCsvRows(rows) {
   if (rows.length < 2) return []; // Need at least header + 1 data row
-  
-  const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
-  
+
+  const headers = rows[0].split(",").map((h) => h.trim().toLowerCase());
+
   // Find column indices by looking for keywords
-  const nameIndex = headers.findIndex(h => h.includes("name"));
-  const organizationIndex = headers.findIndex(h => h.includes("organization"));
-  const linkedinIndex = headers.findIndex(h => h.includes("linkedin"));
-  
+  const nameIndex = headers.findIndex((h) => h.includes("name"));
+  const organizationIndex = headers.findIndex((h) =>
+    h.includes("organization")
+  );
+  const linkedinIndex = headers.findIndex((h) => h.includes("linkedin"));
+
   return rows.slice(1).map((line) => {
-    const columns = line.split(",").map(col => col.trim());
-    
+    const columns = line.split(",").map((col) => col.trim());
+
     return {
       name: nameIndex >= 0 ? columns[nameIndex] : undefined,
-      organization_name: organizationIndex >= 0 ? columns[organizationIndex] : undefined,
+      organization_name:
+        organizationIndex >= 0 ? columns[organizationIndex] : undefined,
       linkedin_url: linkedinIndex >= 0 ? columns[linkedinIndex] : undefined,
     };
   });
@@ -164,16 +164,25 @@ function getApolloDetailsFromCsvRows(rows) {
 async function buildApolloRequest(details) {
   const url =
     "https://api.apollo.io/api/v1/people/bulk_match?reveal_personal_emails=false&reveal_phone_number=false";
-  const object = await window.electronAPI.getKeys();
+  let object;
+  try {
+    object = await window.electronAPI.getKeys();
+  } catch (err) {
+    console.error("Error getting keys for Apollo:", err);
+    throw new Error(
+      "Failed to read stored keys for Apollo. Please check your app configuration."
+    );
+  }
+
   console.log("Using Apollo key:", object.APOLLO_KEY);
-    const headers = {
-      accept: "application/json",
-      "Cache-Control": "no-cache",
-      "Content-Type": "application/json",
-      "x-api-key": object.APOLLO_KEY, // use stored key
-    };
-    const body = JSON.stringify({ details });
-    return { url, headers, body };
+  const headers = {
+    accept: "application/json",
+    "Cache-Control": "no-cache",
+    "Content-Type": "application/json",
+    "x-api-key": object.APOLLO_KEY, // use stored key
+  };
+  const body = JSON.stringify({ details });
+  return { url, headers, body };
 }
 
 /**
@@ -232,7 +241,6 @@ function extractEmailsFromMatches(matchesList) {
   return matchesList.filter((m) => m && m.email).map((m) => m.email);
 }
 
-
 /**
  * Convert array of CSV rows back into a CSV string.
  */
@@ -247,19 +255,20 @@ function rowsToCsvString(rows) {
  * Extract LinkedIn profile URLs from CSV rows (skipping header).
  */
 function extractLinkedinProfiles(rows) {
- if (rows.length < 2) return []; // Need at least header + 1 data row
-  
-const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
+  if (rows.length < 2) return []; // Need at least header + 1 data row
 
-const linkedinIndex = headers.findIndex(h => h.includes("linkedin"));
+  const headers = rows[0].split(",").map((h) => h.trim().toLowerCase());
 
-return rows
-  .slice(1)
-  .map((line) => {
-    const columns = line.split(",").map(col => col.trim());
-    return linkedinIndex >= 0 ? columns[linkedinIndex] : undefined;
-  })
-  .filter((profile) => profile);}
+  const linkedinIndex = headers.findIndex((h) => h.includes("linkedin"));
+
+  return rows
+    .slice(1)
+    .map((line) => {
+      const columns = line.split(",").map((col) => col.trim());
+      return linkedinIndex >= 0 ? columns[linkedinIndex] : undefined;
+    })
+    .filter((profile) => profile);
+}
 
 /**
  * Build ContactOut API request pieces (url, headers, body).
@@ -291,24 +300,27 @@ function applyContactOutResultsToCsv(originalRows, data) {
   // Ensure "ContactOut Email" column exists
   rows = ensureHeader(rows, "ContactOut Email");
 
-  if (data.profiles && typeof data.profiles === 'object') {
+  if (data.profiles && typeof data.profiles === "object") {
     const headerCols = rows[0].split(",");
     const emailColumnIndex = headerCols.indexOf("ContactOut Email");
-    const linkedinColumnIndex = headerCols.findIndex(header => 
+    const linkedinColumnIndex = headerCols.findIndex((header) =>
       header.toLowerCase().includes("linkedin")
     );
 
     // Process each data row (skip header)
     for (let i = 1; i < rows.length; i++) {
       const currentRow = rows[i].split(",");
-      
-      if (linkedinColumnIndex !== -1 && linkedinColumnIndex < currentRow.length) {
+
+      if (
+        linkedinColumnIndex !== -1 &&
+        linkedinColumnIndex < currentRow.length
+      ) {
         const linkedinUrl = currentRow[linkedinColumnIndex].trim();
-        
+
         // Find matching profile in ContactOut response
         const emails = data.profiles[linkedinUrl] || [];
         const email = emails.length > 0 ? emails[0] : ""; // Use first email if multiple
-        
+
         if (emailColumnIndex !== -1) {
           // Update existing "ContactOut Email" column
           currentRow[emailColumnIndex] = email;
@@ -329,40 +341,49 @@ function applyContactOutResultsToCsv(originalRows, data) {
 // ------------------------------
 
 async function fetchApollo() {
-  document.getElementById("apollo-data").innerText = "Loading...";
+  const apolloEl = document.getElementById("apollo-data");
+  apolloEl.innerText = "Loading...";
   const details = getApolloDetailsFromCsvRows(csvRows);
   console.log("Apollo clicked with details:", details);
 
-  // ✅ await async buildApolloRequest
-  const { url, headers, body } = await buildApolloRequest(details);
+  let req;
+  try {
+    req = await buildApolloRequest(details);
+  } catch (err) {
+    console.error("Failed to build Apollo request:", err);
+    apolloEl.innerText = err.message || "Failed to build Apollo request";
+    return;
+  }
 
-  fetch(url, { method: "POST", headers, body })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.error) {
-        replaceText("apollo-data", data.error);
-        return;
-      }
-
-      console.log("Success:", data);
-
-      const matchesList = Array.isArray(data) ? data : data.matches || [];
-      enrichedCsvData = applyApolloMatchesToCsv(csvRows, matchesList);
-
-      displayCsvAsTable(enrichedCsvData);
-
-      const emails = extractEmailsFromMatches(matchesList);
-      const emailText =
-        emails.length > 0 ? emails.join(", ") : "No emails found";
-      console.log(emailText);
-      replaceText("apollo-data", emailText);
-    })
-    .catch((error) => {
-      console.error("Error:", error);
+  try {
+    const response = await fetch(req.url, {
+      method: "POST",
+      headers: req.headers,
+      body: req.body,
     });
+    const data = await response.json();
+
+    if (data.error) {
+      replaceText("apollo-data", data.error);
+      return;
+    }
+
+    console.log("Success:", data);
+
+    const matchesList = Array.isArray(data) ? data : data.matches || [];
+    enrichedCsvData = applyApolloMatchesToCsv(csvRows, matchesList);
+
+    displayCsvAsTable(enrichedCsvData);
+
+    const emails = extractEmailsFromMatches(matchesList);
+    const emailText = emails.length > 0 ? emails.join(", ") : "No emails found";
+    console.log(emailText);
+    replaceText("apollo-data", emailText);
+  } catch (error) {
+    console.error("Apollo request error:", error);
+    apolloEl.innerText = `Error: ${error.message}`;
+  }
 }
-
-
 document.getElementById("apollo-button").addEventListener("click", function () {
   if (!csvRows.length) {
     alert("Load a CSV first");
@@ -373,12 +394,152 @@ document.getElementById("apollo-button").addEventListener("click", function () {
 });
 
 // ------------------------------
+// ZeroBounce Helpers
+// ------------------------------
+
+/**
+ * Convert array of CSV rows back into a CSV string.
+ */
+function rowsToCsvString(rows) {
+  return rows.join("\n");
+}
+
+/**
+ * Build FormData for ZeroBounce bulk email finder.
+ */
+async function buildZeroBounceFormData(csvContent) {
+  const blob = new Blob([csvContent], { type: "text/csv" });
+
+  // 🔑 fetch key from preload storage
+  const object = await window.electronAPI.getKeys();
+  console.log("Using ZeroBounce key:", object.ZEROBOUNCE_KEY);
+
+  const formData = new FormData();
+  formData.append("file", blob, "enriched_data.csv");
+  formData.append("api_key", object.ZEROBOUNCE_KEY);
+  formData.append("domain_column", "2"); // Organization column (1-indexed)
+  formData.append("full_name_column", "1"); // Name column (1-indexed)
+  formData.append("has_header_row", "true");
+
+  return formData;
+}
+function applyZeroBounceResultsToCsv(originalRows, data) {
+  let rows = [...originalRows];
+
+  // Ensure "ZeroBounce Email" column exists
+  rows = ensureHeader(rows, "ZeroBounce Email");
+
+  if (data.results && Array.isArray(data.results)) {
+    const headerCols = rows[0].split(",");
+    const emailColumnIndex = headerCols.indexOf("ZeroBounce Email");
+
+    data.results.forEach((result, index) => {
+      const dataRowIndex = index + 1; // Skip header row
+      if (dataRowIndex < rows.length) {
+        const email = result.email || result.emails?.[0] || "";
+        const currentRow = rows[dataRowIndex].split(",");
+
+        if (emailColumnIndex !== -1) {
+          // Update existing "ZeroBounce Email" column
+          currentRow[emailColumnIndex] = email;
+          rows[dataRowIndex] = currentRow.join(",");
+        } else {
+          // Fallback: add new column at end (shouldn't happen due to ensureHeader above)
+          rows[dataRowIndex] = rows[dataRowIndex] + "," + email;
+        }
+      }
+    });
+  }
+
+  return rows;
+}
+
+async function fetchZeroBounce() {
+  document.getElementById("zero-bounce-data").innerText = "Loading...";
+  let object;
+  try {
+    object = await window.electronAPI.getKeys();
+  } catch (err) {
+    console.error("Error getting keys for Zero Bounce:", err);
+    document.getElementById(
+      "zero-bounce-data"
+    ).innerText = `Failed to read stored keys for Zero Bounce. Please check your app configuration.`;
+    return;
+  }
+
+  const csvContent = rowsToCsvString(csvRows);
+
+  // ✅ await formData builder
+  const formData = await buildZeroBounceFormData(csvContent);
+
+  const url = "https://bulkapi.zerobounce.net/email-finder/sendfile";
+  fetch(url, {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Zero Bounce Success:", data);
+      enrichedCsvData = applyZeroBounceResultsToCsv(enrichedCsvData, data);
+      displayCsvAsTable(enrichedCsvData);
+
+      if (data.success) {
+        document.getElementById(
+          "zero-bounce-data"
+        ).innerText = `File submitted successfully. File ID: ${data.file_id}`;
+
+        // wait for some time and then fetch results
+        fetch(
+          `https://bulkapi.zerobounce.net/v2/getfile?api_key=${object.ZEROBOUNCE_KEY}&file_id=${data.file_id}`
+        )
+          .then((response) => response.json())
+          .then((resultData) => {
+            console.log("Zero Bounce Result Data:", resultData);
+            enrichedCsvData = applyZeroBounceResultsToCsv(
+              enrichedCsvData,
+              resultData
+            );
+            displayCsvAsTable(enrichedCsvData);
+            document.getElementById(
+              "zero-bounce-data"
+            ).innerText = `Zero Bounce results fetched successfully.`;
+          })
+          .catch((error) => {
+            console.error("Error fetching Zero Bounce results:", error);
+          });
+      } else {
+        document.getElementById("zero-bounce-data").innerText = `Error: ${
+          data.error_message || data.message
+        }`;
+      }
+    })
+    .catch((error) => {
+      console.error("Zero Bounce Error:", error);
+      document.getElementById("zero-bounce-data").innerText =
+        "Error submitting file to Zero Bounce";
+    });
+
+  console.log("Zero Bounce clicked");
+}
+
+document
+  .getElementById("zero-bounce-button")
+  .addEventListener("click", function () {
+    if (!csvRows.length) {
+      alert("Load a CSV first");
+      return;
+    }
+
+    fetchZeroBounce();
+  });
+
+// ------------------------------
 // ContactOut Button Handler
 // ------------------------------
 
 async function fetchContactOut() {
   const profiles = extractLinkedinProfiles(csvRows);
-  document.getElementById("contact-out-data").innerText = "Loading...";  
+  document.getElementById("contact-out-data").innerText = "Loading...";
 
   // ✅ await async request builder
   const { url, headers, body } = await buildContactOutRequest(profiles);
@@ -416,7 +577,6 @@ async function fetchContactOut() {
     });
 }
 
-
 document
   .getElementById("contact-out-button")
   .addEventListener("click", function () {
@@ -435,9 +595,9 @@ document
       return;
     }
     fetchApollo();
-    fetchContactOut();
+    fetchZeroBounce();
+    // fetchContactOut();
   });
-
 
 document
   .getElementById("download-csv-button")
@@ -450,7 +610,7 @@ document
     csvString = rowsToCsvString(enrichedCsvData);
     const blob = new Blob([csvString], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement("a");
     a.href = url;
     a.download = "enriched_data.csv";
@@ -460,8 +620,6 @@ document
     URL.revokeObjectURL(url);
   });
 
-
-
 document
   .getElementById("email-users-button")
   .addEventListener("click", function () {
@@ -469,35 +627,38 @@ document
       alert("No enriched data to email.");
       return;
     }
-    
+
     // Extract emails from the enriched CSV data
     const rows = normalizeCsvRows(enrichedCsvData);
-    const headers = rows[0].split(",").map(h => h.trim().toLowerCase());
-    const emailIndex = headers.findIndex(h => h.includes("email"));
+    const headers = rows[0].split(",").map((h) => h.trim().toLowerCase());
+    const emailIndex = headers.findIndex((h) => h.includes("email"));
     if (emailIndex === -1) {
       alert("No email column found in the data.");
       return;
     }
-    
-    const emails = rows.slice(1).map(row => {
-      const cols = row.split(",").map(col => col.trim());
-      return cols[emailIndex];
-    }).filter(email => email);
-    
+
+    const emails = rows
+      .slice(1)
+      .map((row) => {
+        const cols = row.split(",").map((col) => col.trim());
+        return cols[emailIndex];
+      })
+      .filter((email) => email);
+
     if (emails.length === 0) {
       alert("No emails found to send.");
       return;
     }
     console.log("Emails to send:", emails);
-    localStorage.setItem('emails', JSON.stringify(emails));
-    localStorage.setItem('emailsAsCsv', enrichedCsvData);
+    localStorage.setItem("emails", JSON.stringify(emails));
+    localStorage.setItem("emailsAsCsv", enrichedCsvData);
     window.electronAPI.navigateTo("emails.html");
   });
 
-  window.addEventListener("DOMContentLoaded", () => {
-    if(localStorage.getItem('emailsAsCsv')) {
-      const localData = localStorage.getItem('emailsAsCsv');
-      enrichedCsvData = normalizeCsvRows(localData);
-      displayCsvAsTable(enrichedCsvData);
-    }
+window.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem("emailsAsCsv")) {
+    const localData = localStorage.getItem("emailsAsCsv");
+    enrichedCsvData = normalizeCsvRows(localData);
+    displayCsvAsTable(enrichedCsvData);
+  }
 });
