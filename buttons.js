@@ -246,6 +246,39 @@ function applyApolloMatchesToCsv(originalRows, matchesList) {
   return rows;
 }
 
+function applyApolloMatchesToCsvChunk(
+  originalRows,
+  matchesList,
+  startDataRowIndex
+) {
+  let rows = [...originalRows];
+
+  // Ensure "Apollo Email" column header exists
+  rows = ensureHeader(rows, "Apollo Email");
+
+  matchesList.forEach((match, idx) => {
+    const dataRowIndex = startDataRowIndex + idx; // absolute index in rows
+    if (dataRowIndex < rows.length) {
+      const currentRow = rows[dataRowIndex].split(",");
+
+      if (match && match.email) {
+        if (currentRow.length < 5) {
+          rows[dataRowIndex] = rows[dataRowIndex] + "," + match.email;
+        } else {
+          currentRow[4] = match.email;
+          rows[dataRowIndex] = currentRow.join(",");
+        }
+      } else {
+        if (currentRow.length < 5) {
+          rows[dataRowIndex] = rows[dataRowIndex] + ",";
+        }
+      }
+    }
+  });
+
+  return rows;
+}
+
 /**
  * Extract a simple list of emails from Apollo matches for UI display.
  */
@@ -355,42 +388,75 @@ function applyContactOutResultsToCsv(originalRows, data) {
 async function fetchApollo() {
   const apolloEl = document.getElementById("apollo-data");
   apolloEl.innerText = "Loading...";
-  const details = getApolloDetailsFromCsvRows(csvRows);
-  console.log("Apollo clicked with details:", details);
 
-  let req;
-  try {
-    req = await buildApolloRequest(details);
-  } catch (err) {
-    console.error("Failed to build Apollo request:", err);
-    apolloEl.innerText = err.message || "Failed to build Apollo request";
+  const detailsAll = getApolloDetailsFromCsvRows(csvRows);
+  if (!detailsAll.length) {
+    apolloEl.innerText = "No details to query";
     return;
   }
 
-  try {
-    const response = await fetch(req.url, {
-      method: "POST",
-      headers: req.headers,
-      body: req.body,
-    });
-    const data = await response.json();
+  // initialize enrichedCsvData if empty
+  if (!enrichedCsvData || !enrichedCsvData.length) {
+    enrichedCsvData = [...csvRows];
+  }
 
-    if (data.error) {
-      replaceText("apollo-data", data.error);
-      return;
+  const chunkSize = 10;
+  const totalChunks = Math.ceil(detailsAll.length / chunkSize);
+  const allMatches = [];
+
+  try {
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * chunkSize;
+      const chunkDetails = detailsAll.slice(start, start + chunkSize);
+
+      apolloEl.innerText = `Processing Apollo chunk ${
+        chunkIndex + 1
+      }/${totalChunks}...`;
+
+      let req;
+      try {
+        req = await buildApolloRequest(chunkDetails);
+      } catch (err) {
+        console.error("Failed to build Apollo request for chunk:", err);
+        apolloEl.innerText = err.message || "Failed to build Apollo request";
+        return;
+      }
+
+      const response = await fetch(req.url, {
+        method: "POST",
+        headers: req.headers,
+        body: req.body,
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        replaceText("apollo-data", data.error);
+        return;
+      }
+
+      console.log(`Apollo chunk ${chunkIndex + 1} response:`, data);
+
+      const matchesList = Array.isArray(data) ? data : data.matches || [];
+      allMatches.push(...matchesList);
+
+      // Apply this chunk's matches into the correct absolute rows (header is row 0, first data row is 1)
+      const startDataRowIndex = 1 + start; // 1-based offset into CSV rows array
+      enrichedCsvData = applyApolloMatchesToCsvChunk(
+        enrichedCsvData,
+        matchesList,
+        startDataRowIndex
+      );
+
+      // re-render after each chunk so user sees progress
+      displayCsvAsTable(enrichedCsvData);
     }
 
-    console.log("Success:", data);
-
-    const matchesList = Array.isArray(data) ? data : data.matches || [];
-    enrichedCsvData = applyApolloMatchesToCsv(csvRows, matchesList);
-
-    displayCsvAsTable(enrichedCsvData);
-
-    const emails = extractEmailsFromMatches(matchesList);
+    // After all chunks complete, show aggregated emails
+    const emails = extractEmailsFromMatches(allMatches);
     const emailText = emails.length > 0 ? emails.join(", ") : "No emails found";
-    console.log(emailText);
     replaceText("apollo-data", emailText);
+    console.log("Apollo completed. Emails:", emailText);
   } catch (error) {
     console.error("Apollo request error:", error);
     apolloEl.innerText = `Error: ${error.message}`;
