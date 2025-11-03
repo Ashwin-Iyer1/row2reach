@@ -512,10 +512,19 @@ async function fetchZeroBounce() {
               resultData
             );
             displayCsvAsTable(enrichedCsvData);
-            document.getElementById(
-              "zero-bounce-data"
-            ).innerText = `Zero Bounce results fetched successfully.`;
+            if (resultData.success) {
+              document.getElementById(
+                "zero-bounce-data"
+              ).innerText = `Zero Bounce results fetched successfully.`;
+            } else {
+              document.getElementById(
+                "zero-bounce-data"
+              ).innerText = `Error fetching results: ${
+                resultData.error_message || resultData.message
+              }`;
+            }
           })
+
           .catch((error) => {
             console.error("Error fetching Zero Bounce results:", error);
           });
