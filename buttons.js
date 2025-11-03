@@ -76,10 +76,22 @@ function renderTable(table) {
   const container = document.getElementById("table-container");
   container.innerHTML = ""; // Clear previous content
   container.appendChild(table);
+
+  // guard element existence to avoid runtime exceptions that stop listeners
   const download_csv_button = document.getElementById("download-csv-button");
   const email_users_button = document.getElementById("email-users-button");
-  email_users_button.style.display = "inline-block"; // Show email users button
-  download_csv_button.style.display = "inline-block"; // Show download button
+
+  if (email_users_button) {
+    email_users_button.style.display = "inline-block"; // Show email users button
+  } else {
+    console.warn("email-users-button element not found");
+  }
+
+  if (download_csv_button) {
+    download_csv_button.style.display = "inline-block"; // Show download button
+  } else {
+    console.warn("download-csv-button element not found");
+  }
 }
 
 /**
@@ -577,15 +589,15 @@ async function fetchContactOut() {
     });
 }
 
-document
-  .getElementById("contact-out-button")
-  .addEventListener("click", function () {
-    if (!csvRows.length) {
-      alert("Load a CSV first");
-      return;
-    }
-    fetchContactOut();
-  });
+// document
+//   .getElementById("contact-out-button")
+//   .addEventListener("click", function () {
+//     if (!csvRows.length) {
+//       alert("Load a CSV first");
+//       return;
+//     }
+//     fetchContactOut();
+//   });
 
 document
   .getElementById("fetch-all-button")
@@ -602,12 +614,18 @@ document
 document
   .getElementById("download-csv-button")
   .addEventListener("click", function () {
-    var csvString;
-    if (!enrichedCsvData.length) {
-      csvString = rowsToCsvString(csvRows);
+    // Choose enrichedCsvData if present, otherwise fall back to original csvRows
+    const csvString =
+      enrichedCsvData && enrichedCsvData.length
+        ? rowsToCsvString(enrichedCsvData)
+        : rowsToCsvString(csvRows);
+
+    if (!csvString) {
+      console.warn("No CSV data available to download");
+      alert("No CSV data available to download");
+      return;
     }
 
-    csvString = rowsToCsvString(enrichedCsvData);
     const blob = new Blob([csvString], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
 
@@ -623,13 +641,19 @@ document
 document
   .getElementById("email-users-button")
   .addEventListener("click", function () {
-    if (!enrichedCsvData.length) {
+    console.log("Email Users clicked");
+    if (!enrichedCsvData || enrichedCsvData.length === 0) {
       alert("No enriched data to email.");
       return;
     }
 
-    // Extract emails from the enriched CSV data
+    // Normalize to rows array
     const rows = normalizeCsvRows(enrichedCsvData);
+    if (!rows || rows.length < 2) {
+      alert("No enriched data to email.");
+      return;
+    }
+
     const headers = rows[0].split(",").map((h) => h.trim().toLowerCase());
     const emailIndex = headers.findIndex((h) => h.includes("email"));
     if (emailIndex === -1) {
@@ -649,10 +673,19 @@ document
       alert("No emails found to send.");
       return;
     }
+
     console.log("Emails to send:", emails);
-    localStorage.setItem("emails", JSON.stringify(emails));
-    localStorage.setItem("emailsAsCsv", enrichedCsvData);
-    window.electronAPI.navigateTo("emails.html");
+
+    try {
+      // store emails as JSON
+      localStorage.setItem("emails", JSON.stringify(emails));
+      // store CSV as newline-separated string (preserve rows)
+      localStorage.setItem("emailsAsCsv", rows.join("\n"));
+      window.electronAPI.navigateTo("emails.html");
+    } catch (err) {
+      console.error("Failed to prepare emails/navigation:", err);
+      alert("Failed to prepare emails. See console for details.");
+    }
   });
 
 window.addEventListener("DOMContentLoaded", () => {
