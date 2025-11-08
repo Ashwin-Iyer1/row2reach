@@ -51,7 +51,10 @@ export function applyZeroBounceResultsToCsv(originalRows, data) {
     data.results.forEach((result, index) => {
       const dataRowIndex = index + 1;
       if (dataRowIndex < rows.length) {
-        const email = result.email || result.emails?.[0] || "";
+        // Try multiple possible email field names from ZeroBounce CSV
+        const email = result['ZB Email'] || result.email || result.Email || 
+                      result.emails?.[0] || result['Email Address'] || 
+                      result['email_address'] || "";
         const currentRow = rows[dataRowIndex].split(",");
 
         // Ensure we have enough columns
@@ -88,15 +91,92 @@ async function submitZeroBounceFile(formData) {
 }
 
 /**
+ * Parse a CSV line handling quoted fields properly.
+ * @param {string} line - CSV line to parse
+ * @returns {string[]} Array of field values
+ */
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+    
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote
+        current += '"';
+        i++;
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // End of field
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  // Add the last field
+  result.push(current.trim());
+  
+  return result;
+}
+
+/**
  * Fetch ZeroBounce results by file ID.
  * @param {string} apiKey - ZeroBounce API key
  * @param {string} fileId - File ID from submission
- * @returns {Promise<Object>} Result data
+ * @returns {Promise<Object>} Result data with CSV parsed into results array
  */
 async function fetchZeroBounceResults(apiKey, fileId) {
-  const url = `https://bulkapi.zerobounce.net/v2/getfile?api_key=${apiKey}&file_id=${fileId}`;
+  const url = `https://bulkapi.zerobounce.net/email-finder/getfile?api_key=${apiKey}&file_id=${fileId}`;
   const response = await fetch(url);
-  return response.json();
+  
+  // Check if the response is successful
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  // Get the response as text (CSV)
+  const csvText = await response.text();
+  
+  // Check if it's an error response (might be JSON)
+  if (csvText.startsWith('{')) {
+    try {
+      return JSON.parse(csvText);
+    } catch (e) {
+      throw new Error('Invalid response from ZeroBounce API');
+    }
+  }
+  
+  // Parse CSV into results array
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) {
+    return { success: false, error_message: 'No results found' };
+  }
+  
+  const headers = parseCSVLine(lines[0]);
+  const results = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    results.push(row);
+  }
+  
+  return {
+    success: true,
+    results: results
+  };
 }
 
 /**
@@ -162,8 +242,33 @@ export async function fetchZeroBounce() {
       zbEl.innerText = `File submitted successfully. File ID: ${data.file_id}`;
 
       try {
-        const resultData = await fetchZeroBounceResults(apiKey, data.file_id);
-        handleZeroBounceResults(resultData);
+        var tries = 0;
+        var resultData = null;
+        const maxTries = 10; // Try for up to 25 seconds (5 * 5s)
+        
+        while (tries < maxTries) {
+          zbEl.innerText = `Waiting for results... Attempt ${tries + 1}/${maxTries}`;
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          
+          try {
+            resultData = await fetchZeroBounceResults(apiKey, data.file_id);
+            // If we got valid data with success status, break out
+            if (resultData && resultData.success) {
+              break;
+            }
+          } catch (fetchError) {
+            // If it's a JSON parse error, the file might not be ready yet
+            console.log(`Attempt ${tries + 1}: Results not ready yet`);
+          }
+          
+          tries++;
+        }
+        
+        if (resultData && resultData.success) {
+          handleZeroBounceResults(resultData);
+        } else {
+          zbEl.innerText = "Timeout waiting for Zero Bounce results. Please try again later.";
+        }
       } catch (error) {
         console.error("Error fetching Zero Bounce results:", error);
         zbEl.innerText = "Error fetching Zero Bounce results";
