@@ -19,7 +19,48 @@ import {
  * @returns {Promise<FormData>} FormData object ready for API submission
  */
 export async function buildZeroBounceFormData(csvContent) {
-  const blob = new Blob([csvContent], { type: "text/csv" });
+  // Parse the CSV to extract only the required columns
+  const lines = csvContent.trim().split('\n');
+  if (lines.length < 1) {
+    throw new Error('CSV content is empty');
+  }
+  
+  // Parse header row
+  const headers = lines[0].split(',').map(h => h.trim());
+  
+  // Find the indices of required columns
+  const fullNameIndex = headers.findIndex(h => h === 'Full Name' || h === '"Full Name"');
+  const domainIndex = headers.findIndex(h => h === 'Domain' || h === '"Domain"');
+  const linkedinIndex = headers.findIndex(h => h === 'Linkedin URL' || h === '"Linkedin URL"');
+  
+  if (fullNameIndex === -1 || domainIndex === -1) {
+    throw new Error('Required columns (Full Name, Domain) not found in CSV');
+  }
+  
+  // Build new CSV with only the required columns
+  const filteredLines = [];
+  
+  // Add header
+  if (linkedinIndex !== -1) {
+    filteredLines.push('Full Name,Domain,Linkedin URL');
+  } else {
+    filteredLines.push('Full Name,Domain');
+  }
+  
+  // Add data rows
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim());
+    if (linkedinIndex !== -1) {
+      filteredLines.push(`${cols[fullNameIndex]},${cols[domainIndex]},${cols[linkedinIndex]}`);
+    } else {
+      filteredLines.push(`${cols[fullNameIndex]},${cols[domainIndex]}`);
+    }
+  }
+  
+  const filteredCsvContent = filteredLines.join('\n');
+  console.log('Filtered CSV for ZeroBounce:', filteredCsvContent);
+  
+  const blob = new Blob([filteredCsvContent], { type: "text/csv" });
 
   const object = await window.electronAPI.getKeys();
   console.log("Using ZeroBounce key:", object.ZEROBOUNCE_KEY);

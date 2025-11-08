@@ -242,13 +242,82 @@ document
         }
 
         const recipientEmail = recipient || "";
+        
+        // Create a container for recipient with change button
+        const recipientContainer = document.createElement("div");
+        recipientContainer.style.display = "flex";
+        recipientContainer.style.alignItems = "center";
+        recipientContainer.style.marginBottom = "5px";
+        recipientContainer.style.gap = "10px";
+        
         const recipientEmailText = document.createElement("p");
         recipientEmailText.textContent = `Recipient: ${recipientEmail}`;
         recipientEmailText.style.fontWeight = "bold";
+        recipientEmailText.style.margin = "0";
+        
+        // Collect all available email addresses for this row
+        const availableEmails = [];
+        emailHeaderIndexes.forEach(idx => {
+          const email = (dataRow[idx] || "").trim();
+          if (email) {
+            availableEmails.push(email);
+          }
+        });
+        
+        // Only show change button if there are multiple emails available
+        if (availableEmails.length > 1) {
+          // Create a dropdown select element
+          const selectDropdown = document.createElement("select");
+          selectDropdown.style.padding = "5px";
+          selectDropdown.style.fontSize = "12px";
+          selectDropdown.style.cursor = "pointer";
+          
+          // Add all available emails as options
+          availableEmails.forEach((email, index) => {
+            const option = document.createElement("option");
+            option.value = email;
+            option.textContent = email;
+            if (index === 0) {
+              option.selected = true;
+            }
+            selectDropdown.appendChild(option);
+          });
+          
+          // Handle selection change
+          selectDropdown.onchange = () => {
+            const newRecipient = selectDropdown.value;
+            
+            // Update the displayed recipient
+            recipientEmailText.textContent = `Recipient: ${newRecipient}`;
+            
+            // Re-enable the send button and reset its text
+            sendEmailButton.textContent = "Create Email Draft";
+            sendEmailButton.disabled = false;
+            
+            // Update the sendEmailButton's onclick to use the new recipient
+            sendEmailButton.onclick = () => {
+              window.electronAPI.sendMessage("send-email", {
+                recipient: newRecipient,
+                subject: formattedSubject,
+                body: formattedText,
+                importance: "Normal",
+              });
+              
+              sendEmailButton.textContent = "Sent!";
+              sendEmailButton.disabled = true;
+            };
+          };
+          
+          recipientContainer.appendChild(recipientEmailText);
+          recipientContainer.appendChild(selectDropdown);
+        } else {
+          // If only one or no emails, just show the recipient text
+          recipientContainer.appendChild(recipientEmailText);
+        }
 
         preview_list.appendChild(parentDiv);
         parentDiv.appendChild(label);
-        parentDiv.appendChild(recipientEmailText);
+        parentDiv.appendChild(recipientContainer);
         parentDiv.appendChild(subjectPreview);
         parentDiv.appendChild(textarea);
       }
