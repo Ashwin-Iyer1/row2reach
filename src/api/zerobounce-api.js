@@ -54,10 +54,16 @@ export function applyZeroBounceResultsToCsv(originalRows, data) {
         const email = result.email || result.emails?.[0] || "";
         const currentRow = rows[dataRowIndex].split(",");
 
-        if (emailColumnIndex !== -1) {
+        // Ensure we have enough columns
+        while (currentRow.length <= emailColumnIndex) {
+          currentRow.push("");
+        }
+
+        if (emailColumnIndex !== -1 && emailColumnIndex < currentRow.length) {
           currentRow[emailColumnIndex] = email;
           rows[dataRowIndex] = currentRow.join(",");
         } else {
+          // Fallback: append to end if column index not found
           rows[dataRowIndex] = rows[dataRowIndex] + "," + email;
         }
       }

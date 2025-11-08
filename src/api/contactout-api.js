@@ -86,10 +86,16 @@ export function applyContactOutResultsToCsv(originalRows, data) {
         const emails = data.profiles[linkedinUrl] || [];
         const email = emails.length > 0 ? emails[0] : "";
 
-        if (emailColumnIndex !== -1) {
+        // Ensure we have enough columns
+        while (currentRow.length <= emailColumnIndex) {
+          currentRow.push("");
+        }
+
+        if (emailColumnIndex !== -1 && emailColumnIndex < currentRow.length) {
           currentRow[emailColumnIndex] = email;
           rows[i] = currentRow.join(",");
         } else {
+          // Fallback: append to end if column index not found
           rows[i] = rows[i] + "," + email;
         }
       }

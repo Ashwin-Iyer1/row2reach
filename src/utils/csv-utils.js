@@ -106,22 +106,36 @@ export function ensureHeader(rows, headerName) {
 
 /**
  * Set email value in a CSV row at the appropriate column index.
+ * @param {string} headerRow - CSV header row string
  * @param {string} row - CSV row string
  * @param {string} email - Email value to set
- * @param {number} targetColumnIndex - Target column index (default: 4)
+ * @param {string} headerName - Name of the header column to place the email
  * @returns {string} Updated row string
  */
-export function setEmailInRow(row, email, targetColumnIndex = 4) {
+export function setEmailInRow(headerRow, row, email, headerName) {
+  const headers = parseRowColumns(headerRow);
   const currentRow = parseRowColumns(row);
+  
+  // Find the index of the target column
+  const targetColumnIndex = headers.indexOf(headerName);
+  
+  if (targetColumnIndex === -1) {
+    // Header not found, append to the end
+    return row + "," + email;
+  }
 
   if (currentRow.length <= targetColumnIndex) {
-    // Append email if column doesn't exist yet
-    return row + "," + email;
+    // Pad with empty columns if needed and add email
+    while (currentRow.length < targetColumnIndex) {
+      currentRow.push("");
+    }
+    currentRow.push(email);
   } else {
     // Update existing column
     currentRow[targetColumnIndex] = email;
-    return currentRow.join(",");
   }
+  
+  return currentRow.join(",");
 }
 
 /**

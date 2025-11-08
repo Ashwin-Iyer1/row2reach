@@ -89,7 +89,7 @@ export function applyApolloMatchesToCsv(originalRows, matchesList) {
     const dataRowIndex = index + 1;
     if (dataRowIndex < rows.length) {
       const email = match && match.email ? match.email : "";
-      rows[dataRowIndex] = setEmailInRow(rows[dataRowIndex], email);
+      rows[dataRowIndex] = setEmailInRow(rows[0], rows[dataRowIndex], email, "Apollo Email");
     }
   });
 
@@ -115,7 +115,7 @@ export function applyApolloMatchesToCsvChunk(
     const dataRowIndex = startDataRowIndex + idx;
     if (dataRowIndex < rows.length) {
       const email = match && match.email ? match.email : "";
-      rows[dataRowIndex] = setEmailInRow(rows[dataRowIndex], email);
+      rows[dataRowIndex] = setEmailInRow(rows[0], rows[dataRowIndex], email, "Apollo Email");
     }
   });
 
