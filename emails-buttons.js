@@ -123,7 +123,84 @@ window.electronAPI.onHideButton((event, message) => {
         btn.style.display = "block";
       });
     }
+    // Also show the draft all button
+    const draftAllButton = document.getElementById("draftAll");
+    if (draftAllButton) {
+      draftAllButton.style.display = "block";
+    }
   }
+});
+
+// Draft All button handler
+document.getElementById("draftAll").addEventListener("click", function () {
+  const textInput = document.getElementById("body").value;
+  const subjectInput = document.getElementById("subject").value;
+
+  if (!textInput || !subjectInput) {
+    alert("Please enter both subject and message before creating drafts.");
+    return;
+  }
+
+  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+    alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
+  let draftCount = 0;
+
+  // Process each data row (skip header at index 0)
+  for (let i = 1; i < enrichedCsvData.length; i++) {
+    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+
+    let formattedText = textInput;
+    let formattedSubject = subjectInput;
+
+    // Replace each variable with corresponding data for this row
+    headers.forEach((header, index) => {
+      const variable = `{${header}}`;
+      const value = dataRow[index] || "";
+      formattedText = formattedText.replace(
+        new RegExp(escapeRegExp(variable), "g"),
+        value
+      );
+      formattedSubject = formattedSubject.replace(
+        new RegExp(escapeRegExp(variable), "g"),
+        value
+      );
+    });
+
+    // Find email header indexes
+    const emailHeaderIndexes = headers
+      .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
+      .filter((idx) => idx !== -1);
+
+    // Collect all available email addresses for this row
+    const availableEmails = [];
+    emailHeaderIndexes.forEach((idx) => {
+      const email = (dataRow[idx] || "").trim();
+      if (email) {
+        availableEmails.push(email);
+      }
+    });
+
+    // Pick the first email as recipient
+    const recipient = availableEmails[0] || "";
+    
+    if (recipient) {
+      // Send the email data to main process
+      window.electronAPI.sendMessage("send-email", {
+        recipient: recipient,
+        bcc: availableEmails.filter((email) => email !== recipient),
+        subject: formattedSubject,
+        body: formattedText,
+        importance: "Normal",
+      });
+      draftCount++;
+    }
+  }
+
+  alert(`Successfully created ${draftCount} email drafts!`);
 });
 
 document
