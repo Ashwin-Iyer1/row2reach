@@ -1,5 +1,54 @@
 let variables = [];
 
+/**
+ * Generate Northeastern.edu email variations based on first and last name
+ * @param {string} firstName - The first name
+ * @param {string} lastName - The last name
+ * @returns {string[]} - Array of email variations
+ */
+function generateNortheasternEmails(firstName, lastName) {
+  if (!firstName || !lastName) return [];
+  
+  const first = firstName.toLowerCase().trim();
+  const last = lastName.toLowerCase().trim();
+  
+  const emails = [];
+  
+  // [first_initial].[last] + @northeastern.edu
+  emails.push(`${first.charAt(0)}.${last}@northeastern.edu`);
+  
+  // [last].[first_initial] + @northeastern.edu
+  emails.push(`${last}.${first.charAt(0)}@northeastern.edu`);
+  
+  // [last].[first_2_initials] + @northeastern.edu
+  if (first.length >= 2) {
+    emails.push(`${last}.${first.substring(0, 2)}@northeastern.edu`);
+  }
+  
+  // [last].[first_3_initials] + @northeastern.edu
+  if (first.length >= 3) {
+    emails.push(`${last}.${first.substring(0, 3)}@northeastern.edu`);
+  }
+  
+  // [last].[first_N_initials] + @northeastern.edu (up to full first name)
+  for (let i = 4; i <= first.length; i++) {
+    emails.push(`${last}.${first.substring(0, i)}@northeastern.edu`);
+  }
+  
+  return emails;
+}
+
+/**
+ * Check if an email domain is northeastern.edu
+ * @param {string} email - The email address to check
+ * @returns {boolean} - True if domain is northeastern.edu
+ */
+function isNortheasternEmail(email) {
+  if (!email) return false;
+  const domain = email.split('@')[1];
+  return domain && domain.toLowerCase() === 'northeastern.edu';
+}
+
 function normalizeCsvRows(csv) {
   let rows;
 
@@ -479,10 +528,94 @@ document
           }
         });
 
+        // Declare selectDropdown in outer scope so it can be accessed by northeastern button
+        let selectDropdown = null;
+
+        // Create Add Northeastern BCCs button (only show if domain is northeastern.edu)
+        const addNortheasternButton = document.createElement("button");
+        addNortheasternButton.textContent = "Add Northeastern BCCs";
+        addNortheasternButton.className = "add-northeastern-bcc-button";
+        
+        // Check if there is a Domain column and if its value is northeastern.edu
+        const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
+        const hasNortheasternDomain = domainIdx !== -1 && 
+          (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
+        
+        if (hasNortheasternDomain) {
+          // Try to find First Name and Last Name in headers
+          const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
+          const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
+          
+          if (firstNameIdx !== -1 && lastNameIdx !== -1) {
+            const firstName = (dataRow[firstNameIdx] || "").trim();
+            const lastName = (dataRow[lastNameIdx] || "").trim();
+            
+            addNortheasternButton.onclick = () => {
+              const northeasternEmails = generateNortheasternEmails(firstName, lastName);
+              
+              // Add the generated emails to availableEmails array
+              northeasternEmails.forEach(email => {
+                if (!availableEmails.includes(email)) {
+                  availableEmails.push(email);
+                }
+              });
+              
+              // Update BCC display
+              const currentRecipient = selectDropdown ? selectDropdown.value : recipient;
+              bccEmailText.textContent = `BCC Addresses: ${availableEmails
+                .filter((email) => email !== currentRecipient)
+                .join(", ")}`;
+              
+              // Update button to show it was clicked
+              addNortheasternButton.textContent = "BCCs Added!";
+              addNortheasternButton.disabled = true;
+              
+              // Re-enable the send buttons and reset their text
+              sendEmailButton.textContent = "Create Email Draft";
+              sendEmailButton.disabled = false;
+              sendEmailNowButton.textContent = "Send Email";
+              sendEmailNowButton.disabled = false;
+              
+              // Update the sendEmailButton's onclick to use the updated BCC list
+              sendEmailButton.onclick = () => {
+                const finalRecipient = selectDropdown ? selectDropdown.value : recipient;
+                window.electronAPI.sendMessage("send-email", {
+                  recipient: finalRecipient,
+                  bcc: availableEmails.filter((email) => email !== finalRecipient),
+                  subject: formattedSubject,
+                  body: formattedText,
+                  importance: "Normal",
+                });
+
+                sendEmailButton.textContent = "Draft Created!";
+                sendEmailButton.disabled = true;
+              };
+              
+              // Update the sendEmailNowButton's onclick to use the updated BCC list
+              sendEmailNowButton.onclick = () => {
+                const finalRecipient = selectDropdown ? selectDropdown.value : recipient;
+                window.electronAPI.sendMessage("send-mail-now", {
+                  recipient: finalRecipient,
+                  bcc: availableEmails.filter((email) => email !== finalRecipient),
+                  subject: formattedSubject,
+                  body: formattedText,
+                  importance: "Normal",
+                });
+
+                sendEmailNowButton.textContent = "Email Sent!";
+                sendEmailNowButton.disabled = true;
+              };
+            };
+            
+            // Add the button to the container
+            buttonContainer.appendChild(addNortheasternButton);
+          }
+        }
+
         // Only show change button if there are multiple emails available
         if (availableEmails.length > 1) {
           // Create a dropdown select element
-          const selectDropdown = document.createElement("select");
+          selectDropdown = document.createElement("select");
           selectDropdown.style.padding = "5px";
           selectDropdown.style.fontSize = "12px";
           selectDropdown.style.cursor = "pointer";
