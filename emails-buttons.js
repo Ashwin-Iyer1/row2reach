@@ -229,23 +229,34 @@ document.getElementById("draftAll").addEventListener("click", function () {
       .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
       .filter((idx) => idx !== -1);
 
-    // Collect all available email addresses for this row
+    // Collect all available email addresses for this row (normalize to lowercase)
     const availableEmails = [];
     emailHeaderIndexes.forEach((idx) => {
-      const email = (dataRow[idx] || "").trim();
+      const email = (dataRow[idx] || "").trim().toLowerCase();
       if (email) {
         availableEmails.push(email);
       }
     });
 
-    // Pick the first email as recipient
-    const recipient = availableEmails[0] || "";
+    // Add northeastern BCCs if they exist for this row
+    if (northeasternBccsByRow[i]) {
+      northeasternBccsByRow[i].forEach(email => {
+        const lowerEmail = email.toLowerCase();
+        if (!availableEmails.includes(lowerEmail)) {
+          availableEmails.push(lowerEmail);
+        }
+      });
+    }
+
+    // Remove duplicates and pick the first email as recipient
+    const uniqueEmails = [...new Set(availableEmails)];
+    const recipient = uniqueEmails[0] || "";
     
     if (recipient) {
       // Send the email data to main process
       window.electronAPI.sendMessage("send-email", {
         recipient: recipient,
-        bcc: availableEmails.filter((email) => email !== recipient),
+        bcc: uniqueEmails.filter((email) => email !== recipient),
         subject: formattedSubject,
         body: formattedText,
         importance: "Normal",
@@ -255,6 +266,66 @@ document.getElementById("draftAll").addEventListener("click", function () {
   }
 
   alert(`Successfully created ${draftCount} email drafts!`);
+});
+
+// Store generated Northeastern BCCs per row (in memory only, not in CSV)
+let northeasternBccsByRow = {};
+
+// Add Northeastern BCCs to All button handler
+document.getElementById("addNortheasternAll").addEventListener("click", function () {
+  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+    alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
+  
+  // Find the Domain, First Name, and Last Name column indexes
+  const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
+  const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
+  const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
+  
+  if (domainIdx === -1) {
+    alert("No 'Domain' column found in CSV data.");
+    return;
+  }
+  
+  if (firstNameIdx === -1 || lastNameIdx === -1) {
+    alert("First Name and/or Last Name columns not found in CSV data.");
+    return;
+  }
+
+  let processedRows = 0;
+  let totalEmailsGenerated = 0;
+
+  // Process each data row (skip header at index 0)
+  for (let i = 1; i < enrichedCsvData.length; i++) {
+    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+    
+    const domain = (dataRow[domainIdx] || "").trim().toLowerCase();
+    
+    if (domain === 'northeastern.edu') {
+      const firstName = (dataRow[firstNameIdx] || "").trim();
+      const lastName = (dataRow[lastNameIdx] || "").trim();
+      
+      if (firstName && lastName) {
+        const northeasternEmails = generateNortheasternEmails(firstName, lastName);
+        
+        // Store the generated emails for this row
+        northeasternBccsByRow[i] = northeasternEmails;
+        
+        processedRows++;
+        totalEmailsGenerated += northeasternEmails.length;
+      }
+    }
+  }
+  
+  alert(`Generated ${totalEmailsGenerated} Northeastern email variations for ${processedRows} rows! These will be included as BCCs when you send/draft emails.`);
+  
+  // Trigger a preview refresh if preview is already showing
+  if (document.getElementById("preview-list").children.length > 0) {
+    document.getElementById("preview-button").click();
+  }
 });
 
 // Send All button handler
@@ -301,23 +372,34 @@ document.getElementById("sendAll").addEventListener("click", function () {
       .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
       .filter((idx) => idx !== -1);
 
-    // Collect all available email addresses for this row
+    // Collect all available email addresses for this row (normalize to lowercase)
     const availableEmails = [];
     emailHeaderIndexes.forEach((idx) => {
-      const email = (dataRow[idx] || "").trim();
+      const email = (dataRow[idx] || "").trim().toLowerCase();
       if (email) {
         availableEmails.push(email);
       }
     });
 
-    // Pick the first email as recipient
-    const recipient = availableEmails[0] || "";
+    // Add northeastern BCCs if they exist for this row
+    if (northeasternBccsByRow[i]) {
+      northeasternBccsByRow[i].forEach(email => {
+        const lowerEmail = email.toLowerCase();
+        if (!availableEmails.includes(lowerEmail)) {
+          availableEmails.push(lowerEmail);
+        }
+      });
+    }
+
+    // Remove duplicates and pick the first email as recipient
+    const uniqueEmails = [...new Set(availableEmails)];
+    const recipient = uniqueEmails[0] || "";
     
     if (recipient) {
       // Send the email immediately to main process
       window.electronAPI.sendMessage("send-mail-now", {
         recipient: recipient,
-        bcc: availableEmails.filter((email) => email !== recipient),
+        bcc: uniqueEmails.filter((email) => email !== recipient),
         subject: formattedSubject,
         body: formattedText,
         importance: "Normal",
@@ -409,9 +491,10 @@ document
           }
 
           // Send the email data to main process
+          const uniqueEmails = [...new Set(availableEmails)];
           window.electronAPI.sendMessage("send-email", {
             recipient: recipient,
-            bcc: availableEmails.filter((email) => email !== recipient),
+            bcc: uniqueEmails.filter((email) => email !== recipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
@@ -447,9 +530,10 @@ document
           }
 
           // Send the email data to main process
+          const uniqueEmails = [...new Set(availableEmails)];
           window.electronAPI.sendMessage("send-mail-now", {
             recipient: recipient,
-            bcc: availableEmails.filter((email) => email !== recipient),
+            bcc: uniqueEmails.filter((email) => email !== recipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
@@ -511,22 +595,34 @@ document
         recipientEmailText.style.fontWeight = "bold";
         recipientEmailText.style.margin = "0";
 
-        const bccEmailText = document.createElement("p");
-        bccEmailText.textContent = `BCC Addresses: ${emailHeaderIndexes
-          .map((idx) => (dataRow[idx] || "").trim())
-          .filter((email) => email && email !== recipientEmail)
-          .join(", ")}`;
-        bccEmailText.style.fontSize = "12px";
-        bccEmailText.style.color = "#cfcfcfff";
-
-        // Collect all available email addresses for this row
+        // Collect all available email addresses for this row (normalize to lowercase)
         const availableEmails = [];
         emailHeaderIndexes.forEach((idx) => {
-          const email = (dataRow[idx] || "").trim();
+          const email = (dataRow[idx] || "").trim().toLowerCase();
           if (email) {
             availableEmails.push(email);
           }
         });
+
+        // Add northeastern BCCs if they were already generated
+        if (northeasternBccsByRow[i]) {
+          northeasternBccsByRow[i].forEach(email => {
+            const lowerEmail = email.toLowerCase();
+            if (!availableEmails.includes(lowerEmail)) {
+              availableEmails.push(lowerEmail);
+            }
+          });
+        }
+
+        // Remove duplicates from availableEmails
+        const uniqueEmails = [...new Set(availableEmails)];
+
+        const bccEmailText = document.createElement("p");
+        bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
+          .filter((email) => email && email !== recipientEmail)
+          .join(", ")}`;
+        bccEmailText.style.fontSize = "12px";
+        bccEmailText.style.color = "#cfcfcfff";
 
         // Declare selectDropdown in outer scope so it can be accessed by northeastern button
         let selectDropdown = null;
@@ -553,6 +649,9 @@ document
             addNortheasternButton.onclick = () => {
               const northeasternEmails = generateNortheasternEmails(firstName, lastName);
               
+              // Store in global object so Draft All/Send All can use them
+              northeasternBccsByRow[i] = northeasternEmails;
+              
               // Add the generated emails to availableEmails array
               northeasternEmails.forEach(email => {
                 if (!availableEmails.includes(email)) {
@@ -562,7 +661,8 @@ document
               
               // Update BCC display
               const currentRecipient = selectDropdown ? selectDropdown.value : recipient;
-              bccEmailText.textContent = `BCC Addresses: ${availableEmails
+              const uniqueEmails = [...new Set(availableEmails)];
+              bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
                 .filter((email) => email !== currentRecipient)
                 .join(", ")}`;
               
@@ -579,9 +679,10 @@ document
               // Update the sendEmailButton's onclick to use the updated BCC list
               sendEmailButton.onclick = () => {
                 const finalRecipient = selectDropdown ? selectDropdown.value : recipient;
+                const uniqueEmails = [...new Set(availableEmails)];
                 window.electronAPI.sendMessage("send-email", {
                   recipient: finalRecipient,
-                  bcc: availableEmails.filter((email) => email !== finalRecipient),
+                  bcc: uniqueEmails.filter((email) => email !== finalRecipient),
                   subject: formattedSubject,
                   body: formattedText,
                   importance: "Normal",
@@ -594,9 +695,10 @@ document
               // Update the sendEmailNowButton's onclick to use the updated BCC list
               sendEmailNowButton.onclick = () => {
                 const finalRecipient = selectDropdown ? selectDropdown.value : recipient;
+                const uniqueEmails = [...new Set(availableEmails)];
                 window.electronAPI.sendMessage("send-mail-now", {
                   recipient: finalRecipient,
-                  bcc: availableEmails.filter((email) => email !== finalRecipient),
+                  bcc: uniqueEmails.filter((email) => email !== finalRecipient),
                   subject: formattedSubject,
                   body: formattedText,
                   importance: "Normal",
@@ -639,7 +741,8 @@ document
             // Update the displayed recipient
             recipientEmailText.textContent = `Recipient: ${newRecipient}`;
 
-            bccEmailText.textContent = `BCC Addresses: ${availableEmails
+            const uniqueEmails = [...new Set(availableEmails)];
+            bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
               .filter((email) => email !== newRecipient)
               .join(", ")}`;
 
@@ -649,9 +752,10 @@ document
 
             // Update the sendEmailButton's onclick to use the new recipient
             sendEmailButton.onclick = () => {
+              const uniqueEmails = [...new Set(availableEmails)];
               window.electronAPI.sendMessage("send-email", {
                 recipient: newRecipient,
-                bcc: availableEmails.filter((email) => email !== newRecipient),
+                bcc: uniqueEmails.filter((email) => email !== newRecipient),
                 subject: formattedSubject,
                 body: formattedText,
                 importance: "Normal",
