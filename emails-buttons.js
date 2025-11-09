@@ -575,7 +575,7 @@ document
           }
         }
 
-        const recipientEmail = recipient || "";
+        const recipientEmail = (recipient || "").toLowerCase();
 
         // Create a container for recipient with change button
         const recipientContainer = document.createElement("div");
@@ -652,15 +652,16 @@ document
               // Store in global object so Draft All/Send All can use them
               northeasternBccsByRow[i] = northeasternEmails;
               
-              // Add the generated emails to availableEmails array
+              // Add the generated emails to availableEmails array (normalize to lowercase)
               northeasternEmails.forEach(email => {
-                if (!availableEmails.includes(email)) {
-                  availableEmails.push(email);
+                const lowerEmail = email.toLowerCase();
+                if (!availableEmails.includes(lowerEmail)) {
+                  availableEmails.push(lowerEmail);
                 }
               });
               
               // Update BCC display
-              const currentRecipient = selectDropdown ? selectDropdown.value : recipient;
+              const currentRecipient = (selectDropdown ? selectDropdown.value : recipient).toLowerCase();
               const uniqueEmails = [...new Set(availableEmails)];
               bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
                 .filter((email) => email !== currentRecipient)
@@ -736,7 +737,7 @@ document
 
           // Handle selection change
           selectDropdown.onchange = () => {
-            const newRecipient = selectDropdown.value;
+            const newRecipient = selectDropdown.value.toLowerCase();
 
             // Update the displayed recipient
             recipientEmailText.textContent = `Recipient: ${newRecipient}`;
