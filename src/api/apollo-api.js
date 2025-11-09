@@ -29,15 +29,29 @@ export function getApolloDetailsFromCsvRows(rows) {
 
   const headers = parseHeaders(rows[0]);
 
-  const nameIndex = findColumnIndex(headers, "name");
+  let nameIndex = findColumnIndex(headers, "full name");
+  const firstNameIndex = findColumnIndex(headers, "first name");
+  const lastNameIndex = findColumnIndex(headers, "last name");
   const organizationIndex = findColumnIndex(headers, "organization");
   const linkedinIndex = findColumnIndex(headers, "linkedin");
+
+  // If we don't have a name column but have first/last name, we'll combine them
+  const needsToCombineNames = nameIndex < 0 && (firstNameIndex >= 0 || lastNameIndex >= 0);
 
   return rows.slice(1).map((line) => {
     const columns = parseRowColumns(line);
 
+    let fullName;
+    if (needsToCombineNames) {
+      const firstName = firstNameIndex >= 0 ? (columns[firstNameIndex] || "").trim() : "";
+      const lastName = lastNameIndex >= 0 ? (columns[lastNameIndex] || "").trim() : "";
+      fullName = [firstName, lastName].filter(Boolean).join(" ");
+    } else {
+      fullName = nameIndex >= 0 ? columns[nameIndex] : undefined;
+    }
+
     return {
-      name: nameIndex >= 0 ? columns[nameIndex] : undefined,
+      name: fullName,
       organization_name:
         organizationIndex >= 0 ? columns[organizationIndex] : undefined,
       linkedin_url: linkedinIndex >= 0 ? columns[linkedinIndex] : undefined,

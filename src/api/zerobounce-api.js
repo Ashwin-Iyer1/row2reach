@@ -20,46 +20,81 @@ import {
  */
 export async function buildZeroBounceFormData(csvContent) {
   // Parse the CSV to extract only the required columns
-  const lines = csvContent.trim().split('\n');
+  const lines = csvContent.trim().split("\n");
   if (lines.length < 1) {
-    throw new Error('CSV content is empty');
+    throw new Error("CSV content is empty");
   }
-  
+
   // Parse header row
-  const headers = lines[0].split(',').map(h => h.trim());
-  
+  const headers = lines[0]
+    .split(",")
+    .map((h) => h.trim().replace(/^"|"$/g, ""));
+
   // Find the indices of required columns
-  const fullNameIndex = headers.findIndex(h => h === 'Full Name' || h === '"Full Name"');
-  const domainIndex = headers.findIndex(h => h === 'Domain' || h === '"Domain"');
-  const linkedinIndex = headers.findIndex(h => h === 'Linkedin URL' || h === '"Linkedin URL"');
-  
-  if (fullNameIndex === -1 || domainIndex === -1) {
-    throw new Error('Required columns (Full Name, Domain) not found in CSV');
+  let fullNameIndex = headers.findIndex((h) => h.toLowerCase() === "full name");
+  const firstNameIndex = headers.findIndex(
+    (h) => h.toLowerCase() === "first name"
+  );
+  const lastNameIndex = headers.findIndex(
+    (h) => h.toLowerCase() === "last name"
+  );
+  const domainIndex = headers.findIndex((h) => h.toLowerCase() === "domain");
+  const linkedinIndex = headers.findIndex(
+    (h) => h.toLowerCase() === "linkedin url" || h.toLowerCase() === "linkedin"
+  );
+
+  // Check if we need to combine first and last name
+  const needsToCombineNames =
+    fullNameIndex === -1 && (firstNameIndex !== -1 || lastNameIndex !== -1);
+
+  if (fullNameIndex === -1 && !needsToCombineNames) {
+    throw new Error(
+      "Required columns (Full Name or First Name/Last Name) not found in CSV"
+    );
   }
-  
+
+  if (domainIndex === -1) {
+    throw new Error("Required column (Domain) not found in CSV");
+  }
+
   // Build new CSV with only the required columns
   const filteredLines = [];
-  
+
   // Add header
   if (linkedinIndex !== -1) {
-    filteredLines.push('Full Name,Domain,Linkedin URL');
+    filteredLines.push("Full Name,Domain,Linkedin URL");
   } else {
-    filteredLines.push('Full Name,Domain');
+    filteredLines.push("Full Name,Domain");
   }
-  
+
   // Add data rows
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim());
-    if (linkedinIndex !== -1) {
-      filteredLines.push(`${cols[fullNameIndex]},${cols[domainIndex]},${cols[linkedinIndex]}`);
+    const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+
+    // Get full name - either from full name column or combine first/last
+    let fullName;
+    if (needsToCombineNames) {
+      const firstName =
+        firstNameIndex !== -1 ? (cols[firstNameIndex] || "").trim() : "";
+      const lastName =
+        lastNameIndex !== -1 ? (cols[lastNameIndex] || "").trim() : "";
+      fullName = [firstName, lastName].filter(Boolean).join(" ");
     } else {
-      filteredLines.push(`${cols[fullNameIndex]},${cols[domainIndex]}`);
+      fullName = cols[fullNameIndex] || "";
+    }
+
+    if (linkedinIndex !== -1) {
+      filteredLines.push(
+        `${fullName},${cols[domainIndex]},${cols[linkedinIndex]}`
+      );
+    } else {
+      filteredLines.push(`${fullName},${cols[domainIndex]}`);
     }
   }
-  
-  const filteredCsvContent = filteredLines.join('\n');
-  console.log('Filtered CSV for ZeroBounce:', filteredCsvContent);
-  
+
+  const filteredCsvContent = filteredLines.join("\n");
+  console.log("Filtered CSV for ZeroBounce:", filteredCsvContent);
+
   const blob = new Blob([filteredCsvContent], { type: "text/csv" });
 
   const object = await window.electronAPI.getKeys();
@@ -93,9 +128,14 @@ export function applyZeroBounceResultsToCsv(originalRows, data) {
       const dataRowIndex = index + 1;
       if (dataRowIndex < rows.length) {
         // Try multiple possible email field names from ZeroBounce CSV
-        const email = result['ZB Email'] || result.email || result.Email || 
-                      result.emails?.[0] || result['Email Address'] || 
-                      result['email_address'] || "";
+        const email =
+          result["ZB Email"] ||
+          result.email ||
+          result.Email ||
+          result.emails?.[0] ||
+          result["Email Address"] ||
+          result["email_address"] ||
+          "";
         const currentRow = rows[dataRowIndex].split(",");
 
         // Ensure we have enough columns
@@ -138,13 +178,13 @@ async function submitZeroBounceFile(formData) {
  */
 function parseCSVLine(line) {
   const result = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
-  
+
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     const nextChar = line[i + 1];
-    
+
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
         // Escaped quote
@@ -154,18 +194,18 @@ function parseCSVLine(line) {
         // Toggle quote state
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === "," && !inQuotes) {
       // End of field
       result.push(current.trim());
-      current = '';
+      current = "";
     } else {
       current += char;
     }
   }
-  
+
   // Add the last field
   result.push(current.trim());
-  
+
   return result;
 }
 
@@ -178,45 +218,45 @@ function parseCSVLine(line) {
 async function fetchZeroBounceResults(apiKey, fileId) {
   const url = `https://bulkapi.zerobounce.net/email-finder/getfile?api_key=${apiKey}&file_id=${fileId}`;
   const response = await fetch(url);
-  
+
   // Check if the response is successful
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  
+
   // Get the response as text (CSV)
   const csvText = await response.text();
-  
+
   // Check if it's an error response (might be JSON)
-  if (csvText.startsWith('{')) {
+  if (csvText.startsWith("{")) {
     try {
       return JSON.parse(csvText);
     } catch (e) {
-      throw new Error('Invalid response from ZeroBounce API');
+      throw new Error("Invalid response from ZeroBounce API");
     }
   }
-  
+
   // Parse CSV into results array
-  const lines = csvText.trim().split('\n');
+  const lines = csvText.trim().split("\n");
   if (lines.length < 2) {
-    return { success: false, error_message: 'No results found' };
+    return { success: false, error_message: "No results found" };
   }
-  
+
   const headers = parseCSVLine(lines[0]);
   const results = [];
-  
+
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
     const row = {};
     headers.forEach((header, index) => {
-      row[header] = values[index] || '';
+      row[header] = values[index] || "";
     });
     results.push(row);
   }
-  
+
   return {
     success: true,
-    results: results
+    results: results,
   };
 }
 
@@ -286,11 +326,13 @@ export async function fetchZeroBounce() {
         var tries = 0;
         var resultData = null;
         const maxTries = 10; // Try for up to 25 seconds (5 * 5s)
-        
+
         while (tries < maxTries) {
-          zbEl.innerText = `Waiting for results... Attempt ${tries + 1}/${maxTries}`;
+          zbEl.innerText = `Waiting for results... Attempt ${
+            tries + 1
+          }/${maxTries}`;
           await new Promise((resolve) => setTimeout(resolve, 5000));
-          
+
           try {
             resultData = await fetchZeroBounceResults(apiKey, data.file_id);
             // If we got valid data with success status, break out
@@ -301,14 +343,15 @@ export async function fetchZeroBounce() {
             // If it's a JSON parse error, the file might not be ready yet
             console.log(`Attempt ${tries + 1}: Results not ready yet`);
           }
-          
+
           tries++;
         }
-        
+
         if (resultData && resultData.success) {
           handleZeroBounceResults(resultData);
         } else {
-          zbEl.innerText = "Timeout waiting for Zero Bounce results. Please try again later.";
+          zbEl.innerText =
+            "Timeout waiting for Zero Bounce results. Please try again later.";
         }
       } catch (error) {
         console.error("Error fetching Zero Bounce results:", error);
