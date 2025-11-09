@@ -203,6 +203,7 @@ document
           // Send the email data to main process
           window.electronAPI.sendMessage("send-email", {
             recipient: recipient,
+            bcc: availableEmails.filter((email) => email !== recipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
@@ -242,28 +243,42 @@ document
         }
 
         const recipientEmail = recipient || "";
-        
+
         // Create a container for recipient with change button
         const recipientContainer = document.createElement("div");
         recipientContainer.style.display = "flex";
-        recipientContainer.style.alignItems = "center";
+        recipientContainer.style.alignItems = "left";
         recipientContainer.style.marginBottom = "5px";
         recipientContainer.style.gap = "10px";
-        
+        recipientContainer.style.display = "flex";
+        recipientContainer.style.flexDirection = "column";
+
+        const recipientSelectContainer = document.createElement("div");
+        recipientSelectContainer.style.display = "flex";
+        recipientSelectContainer.style.gap = "10px";
+
         const recipientEmailText = document.createElement("p");
         recipientEmailText.textContent = `Recipient: ${recipientEmail}`;
         recipientEmailText.style.fontWeight = "bold";
         recipientEmailText.style.margin = "0";
-        
+
+        const bccEmailText = document.createElement("p");
+        bccEmailText.textContent = `BCC Addresses: ${emailHeaderIndexes
+          .map((idx) => (dataRow[idx] || "").trim())
+          .filter((email) => email && email !== recipientEmail)
+          .join(", ")}`;
+        bccEmailText.style.fontSize = "12px";
+        bccEmailText.style.color = "#cfcfcfff";
+
         // Collect all available email addresses for this row
         const availableEmails = [];
-        emailHeaderIndexes.forEach(idx => {
+        emailHeaderIndexes.forEach((idx) => {
           const email = (dataRow[idx] || "").trim();
           if (email) {
             availableEmails.push(email);
           }
         });
-        
+
         // Only show change button if there are multiple emails available
         if (availableEmails.length > 1) {
           // Create a dropdown select element
@@ -271,7 +286,8 @@ document
           selectDropdown.style.padding = "5px";
           selectDropdown.style.fontSize = "12px";
           selectDropdown.style.cursor = "pointer";
-          
+          selectDropdown.style.width = "fit-content";
+
           // Add all available emails as options
           availableEmails.forEach((email, index) => {
             const option = document.createElement("option");
@@ -282,37 +298,46 @@ document
             }
             selectDropdown.appendChild(option);
           });
-          
+
           // Handle selection change
           selectDropdown.onchange = () => {
             const newRecipient = selectDropdown.value;
-            
+
             // Update the displayed recipient
             recipientEmailText.textContent = `Recipient: ${newRecipient}`;
-            
+
+            bccEmailText.textContent = `BCC Addresses: ${availableEmails
+              .filter((email) => email !== newRecipient)
+              .join(", ")}`;
+
             // Re-enable the send button and reset its text
             sendEmailButton.textContent = "Create Email Draft";
             sendEmailButton.disabled = false;
-            
+
             // Update the sendEmailButton's onclick to use the new recipient
             sendEmailButton.onclick = () => {
               window.electronAPI.sendMessage("send-email", {
                 recipient: newRecipient,
+                bcc: availableEmails.filter((email) => email !== newRecipient),
                 subject: formattedSubject,
                 body: formattedText,
                 importance: "Normal",
               });
-              
+
               sendEmailButton.textContent = "Sent!";
               sendEmailButton.disabled = true;
             };
           };
-          
-          recipientContainer.appendChild(recipientEmailText);
-          recipientContainer.appendChild(selectDropdown);
+
+          recipientSelectContainer.appendChild(recipientEmailText);
+          recipientSelectContainer.appendChild(selectDropdown);
+          recipientContainer.appendChild(recipientSelectContainer);
+          recipientContainer.appendChild(bccEmailText);
         } else {
           // If only one or no emails, just show the recipient text
-          recipientContainer.appendChild(recipientEmailText);
+          recipientSelectContainer.appendChild(recipientEmailText);
+          recipientContainer.appendChild(recipientSelectContainer);
+          recipientContainer.appendChild(bccEmailText);
         }
 
         preview_list.appendChild(parentDiv);

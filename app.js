@@ -79,6 +79,11 @@ ipcMain.on(IPC_MESSAGES.SENDEMAIL, async (event, emailParams) => {
         },
       },
     ],
+    bccRecipients: (emailParams.bcc || []).map(email => ({
+      emailAddress: {
+        address: email,
+      },
+    })),
   };
 
   const response = await fetch(url, {
