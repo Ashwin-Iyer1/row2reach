@@ -89,6 +89,22 @@ export function findColumnIndex(headers, keyword) {
 }
 
 /**
+ * Find all column indices that contain a keyword.
+ * @param {string[]} headers - Array of header names
+ * @param {string} keyword - Keyword to search for
+ * @returns {number[]} Array of column indices
+ */
+export function findAllColumnIndices(headers, keyword) {
+  const indices = [];
+  headers.forEach((h, index) => {
+    if (h.includes(keyword.toLowerCase())) {
+      indices.push(index);
+    }
+  });
+  return indices;
+}
+
+/**
  * Ensure a header exists in the first row, append if missing.
  * @param {string[]} rows - Array of CSV rows
  * @param {string} headerName - Header name to ensure exists
@@ -140,6 +156,7 @@ export function setEmailInRow(headerRow, row, email, headerName) {
 
 /**
  * Extract emails from enriched CSV data.
+ * Searches all columns containing "email" and returns the first non-empty value for each row.
  * @param {string[]} enrichedCsvData - Enriched CSV data
  * @returns {string[]|null} Array of emails or null if none found
  */
@@ -150,18 +167,28 @@ export function extractEmailsFromCsv(enrichedCsvData) {
   }
 
   const headers = parseHeaders(rows[0]);
-  const emailIndex = findColumnIndex(headers, "email");
+  const emailIndices = findAllColumnIndices(headers, "email");
 
-  if (emailIndex === -1) {
+  if (emailIndices.length === 0) {
     alert("No email column found in the data.");
     return null;
   }
+
+  console.log(`Found ${emailIndices.length} email column(s):`, 
+    emailIndices.map(idx => headers[idx]));
 
   const emails = rows
     .slice(1)
     .map((row) => {
       const cols = parseRowColumns(row);
-      return cols[emailIndex];
+      // Try each email column and return the first non-empty value
+      for (const index of emailIndices) {
+        const email = cols[index]?.trim();
+        if (email) {
+          return email;
+        }
+      }
+      return null;
     })
     .filter((email) => email);
 
