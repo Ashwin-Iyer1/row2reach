@@ -128,6 +128,11 @@ window.electronAPI.onHideButton((event, message) => {
     if (draftAllButton) {
       draftAllButton.style.display = "block";
     }
+    // Also show the send all button
+    const sendAllButton = document.getElementById("sendAll");
+    if (sendAllButton) {
+      sendAllButton.style.display = "block";
+    }
   }
 });
 
@@ -201,6 +206,78 @@ document.getElementById("draftAll").addEventListener("click", function () {
   }
 
   alert(`Successfully created ${draftCount} email drafts!`);
+});
+
+// Send All button handler
+document.getElementById("sendAll").addEventListener("click", function () {
+  const textInput = document.getElementById("body").value;
+  const subjectInput = document.getElementById("subject").value;
+
+  if (!textInput || !subjectInput) {
+    alert("Please enter both subject and message before sending emails.");
+    return;
+  }
+
+  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+    alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
+  let sendCount = 0;
+
+  // Process each data row (skip header at index 0)
+  for (let i = 1; i < enrichedCsvData.length; i++) {
+    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+
+    let formattedText = textInput;
+    let formattedSubject = subjectInput;
+
+    // Replace each variable with corresponding data for this row
+    headers.forEach((header, index) => {
+      const variable = `{${header}}`;
+      const value = dataRow[index] || "";
+      formattedText = formattedText.replace(
+        new RegExp(escapeRegExp(variable), "g"),
+        value
+      );
+      formattedSubject = formattedSubject.replace(
+        new RegExp(escapeRegExp(variable), "g"),
+        value
+      );
+    });
+
+    // Find email header indexes
+    const emailHeaderIndexes = headers
+      .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
+      .filter((idx) => idx !== -1);
+
+    // Collect all available email addresses for this row
+    const availableEmails = [];
+    emailHeaderIndexes.forEach((idx) => {
+      const email = (dataRow[idx] || "").trim();
+      if (email) {
+        availableEmails.push(email);
+      }
+    });
+
+    // Pick the first email as recipient
+    const recipient = availableEmails[0] || "";
+    
+    if (recipient) {
+      // Send the email immediately to main process
+      window.electronAPI.sendMessage("send-mail-now", {
+        recipient: recipient,
+        bcc: availableEmails.filter((email) => email !== recipient),
+        subject: formattedSubject,
+        body: formattedText,
+        importance: "Normal",
+      });
+      sendCount++;
+    }
+  }
+
+  alert(`Successfully sent ${sendCount} emails!`);
 });
 
 document
