@@ -36,7 +36,7 @@ const GRAPH_ENDPOINT_HOST = "Enter_the_Graph_Endpoint_Here"; // include the trai
 const protectedResources = {
     graphMe: {
         endpoint: `${GRAPH_ENDPOINT_HOST}v1.0/me`,
-        scopes: ["User.Read", "Mail.ReadWrite"],
+        scopes: ["User.Read", "Mail.ReadWrite", "Mail.Send"],
     }
 };
 

@@ -254,6 +254,11 @@ document
         const previewText = document.createElement("p");
         previewText.textContent = `Preview for Row ${i}:`;
 
+        // Create button container for both buttons
+        const buttonContainer = document.createElement("div");
+        buttonContainer.style.display = "flex";
+        buttonContainer.style.gap = "10px";
+
         const sendEmailButton = document.createElement("button");
         sendEmailButton.id = "sendEmailButton";
         sendEmailButton.textContent = "Create Email Draft";
@@ -287,12 +292,53 @@ document
           });
 
           // Optional UI feedback
-          sendEmailButton.textContent = "Sent!";
+          sendEmailButton.textContent = "Draft Created!";
           sendEmailButton.disabled = true;
         };
 
+        // Create Send Email Now button
+        const sendEmailNowButton = document.createElement("button");
+        sendEmailNowButton.id = "sendEmailNowButton";
+        sendEmailNowButton.textContent = "Send Email";
+        sendEmailNowButton.className = "send-email-now-button";
+        sendEmailNowButton.style.display =
+          signInButton.style.display == "none" ? "block" : "none";
+
+        sendEmailNowButton.onclick = () => {
+          // Example: assume one column is called "Email" in your CSV
+          const emailHeaderIndexes = headers
+            .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
+            .filter((i) => i !== -1);
+
+          // Loop through those columns and pick the first filled one
+          let recipient = "";
+          for (const i of emailHeaderIndexes) {
+            const value = (dataRow[i] || "").trim();
+            if (value) {
+              recipient = value;
+              break;
+            }
+          }
+
+          // Send the email data to main process
+          window.electronAPI.sendMessage("send-mail-now", {
+            recipient: recipient,
+            bcc: availableEmails.filter((email) => email !== recipient),
+            subject: formattedSubject,
+            body: formattedText,
+            importance: "Normal",
+          });
+
+          // Optional UI feedback
+          sendEmailNowButton.textContent = "Email Sent!";
+          sendEmailNowButton.disabled = true;
+        };
+
+        buttonContainer.appendChild(sendEmailButton);
+        buttonContainer.appendChild(sendEmailNowButton);
+
         label.appendChild(previewText);
-        label.appendChild(sendEmailButton);
+        label.appendChild(buttonContainer);
 
         // Create a p element for the subject preview
         const subjectPreview = document.createElement("p");

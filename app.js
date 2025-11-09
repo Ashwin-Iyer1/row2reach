@@ -95,3 +95,54 @@ ipcMain.on(IPC_MESSAGES.SENDEMAIL, async (event, emailParams) => {
   const data = await response.json().catch(() => ({}));
   console.log("📄 Draft created:", data);
 });
+
+ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
+  const tokenRequest = {
+    scopes: protectedResources.graphMe.scopes,
+  };
+  const tokenResponse = await authProvider.getToken(tokenRequest);
+
+  const url = "https://graph.microsoft.com/v1.0/me/sendMail";
+  const headers = {
+    Authorization: `Bearer ${tokenResponse.accessToken}`,
+    "Content-Type": "application/json",
+  };
+
+  // Send mail format: wrap the message in a "message" property
+  const emailMessage = {
+    message: {
+      subject: emailParams.subject,
+      importance: emailParams.importance || "Normal",
+      body: {
+        contentType: "HTML",
+        content: emailParams.body,
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: emailParams.recipient,
+          },
+        },
+      ],
+      bccRecipients: (emailParams.bcc || []).map(email => ({
+        emailAddress: {
+          address: email,
+        },
+      })),
+    },
+    saveToSentItems: true,
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(emailMessage),
+  });
+
+  if (response.ok) {
+    console.log("✅ Email sent successfully to:", emailParams.recipient);
+  } else {
+    const errorData = await response.json().catch(() => ({}));
+    console.error("❌ Failed to send email:", errorData);
+  }
+});
