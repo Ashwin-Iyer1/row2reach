@@ -229,11 +229,42 @@ document.getElementById("draftAll").addEventListener("click", function () {
       .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
       .filter((idx) => idx !== -1);
 
+    // Check if this is a Northeastern domain row
+    const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
+    const isNortheasternDomain = domainIdx !== -1 && 
+      (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
+    
+    let recipient = "";
+    
+    // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
+    if (isNortheasternDomain) {
+      const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
+      const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
+      
+      if (firstNameIdx !== -1 && lastNameIdx !== -1) {
+        const firstName = (dataRow[firstNameIdx] || "").trim();
+        const lastName = (dataRow[lastNameIdx] || "").trim();
+        
+        if (firstName && lastName) {
+          const first = firstName.toLowerCase();
+          const last = lastName.toLowerCase();
+          recipient = `${last}.${first.charAt(0)}@northeastern.edu`;
+        }
+      }
+    }
+
     // Collect all available email addresses for this row (normalize to lowercase)
     const availableEmails = [];
+    
+    // For Northeastern domains, add the primary email first
+    if (isNortheasternDomain && recipient) {
+      availableEmails.push(recipient);
+    }
+    
+    // Add all other emails from CSV columns
     emailHeaderIndexes.forEach((idx) => {
       const email = (dataRow[idx] || "").trim().toLowerCase();
-      if (email) {
+      if (email && !availableEmails.includes(email)) {
         availableEmails.push(email);
       }
     });
@@ -248,9 +279,11 @@ document.getElementById("draftAll").addEventListener("click", function () {
       });
     }
 
-    // Remove duplicates and pick the first email as recipient
+    // Remove duplicates and pick the first email as recipient (if not already set for Northeastern)
     const uniqueEmails = [...new Set(availableEmails)];
-    const recipient = uniqueEmails[0] || "";
+    if (!recipient) {
+      recipient = uniqueEmails[0] || "";
+    }
     
     if (recipient) {
       // Send the email data to main process
@@ -372,11 +405,42 @@ document.getElementById("sendAll").addEventListener("click", function () {
       .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
       .filter((idx) => idx !== -1);
 
+    // Check if this is a Northeastern domain row
+    const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
+    const isNortheasternDomain = domainIdx !== -1 && 
+      (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
+    
+    let recipient = "";
+    
+    // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
+    if (isNortheasternDomain) {
+      const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
+      const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
+      
+      if (firstNameIdx !== -1 && lastNameIdx !== -1) {
+        const firstName = (dataRow[firstNameIdx] || "").trim();
+        const lastName = (dataRow[lastNameIdx] || "").trim();
+        
+        if (firstName && lastName) {
+          const first = firstName.toLowerCase();
+          const last = lastName.toLowerCase();
+          recipient = `${last}.${first.charAt(0)}@northeastern.edu`;
+        }
+      }
+    }
+
     // Collect all available email addresses for this row (normalize to lowercase)
     const availableEmails = [];
+    
+    // For Northeastern domains, add the primary email first
+    if (isNortheasternDomain && recipient) {
+      availableEmails.push(recipient);
+    }
+    
+    // Add all other emails from CSV columns
     emailHeaderIndexes.forEach((idx) => {
       const email = (dataRow[idx] || "").trim().toLowerCase();
-      if (email) {
+      if (email && !availableEmails.includes(email)) {
         availableEmails.push(email);
       }
     });
@@ -391,9 +455,11 @@ document.getElementById("sendAll").addEventListener("click", function () {
       });
     }
 
-    // Remove duplicates and pick the first email as recipient
+    // Remove duplicates and pick the first email as recipient (if not already set for Northeastern)
     const uniqueEmails = [...new Set(availableEmails)];
-    const recipient = uniqueEmails[0] || "";
+    if (!recipient) {
+      recipient = uniqueEmails[0] || "";
+    }
     
     if (recipient) {
       // Send the email immediately to main process
@@ -565,13 +631,38 @@ document
           .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
           .filter((i) => i !== -1);
 
-        // Loop through those columns and pick the first filled one
+        // Check if this is a Northeastern domain row
+        const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
+        const isNortheasternDomain = domainIdx !== -1 && 
+          (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
+        
         let recipient = "";
-        for (const i of emailHeaderIndexes) {
-          const value = (dataRow[i] || "").trim();
-          if (value) {
-            recipient = value;
-            break;
+        
+        // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
+        if (isNortheasternDomain) {
+          const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
+          const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
+          
+          if (firstNameIdx !== -1 && lastNameIdx !== -1) {
+            const firstName = (dataRow[firstNameIdx] || "").trim();
+            const lastName = (dataRow[lastNameIdx] || "").trim();
+            
+            if (firstName && lastName) {
+              const first = firstName.toLowerCase();
+              const last = lastName.toLowerCase();
+              recipient = `${last}.${first.charAt(0)}@northeastern.edu`;
+            }
+          }
+        }
+        
+        // If no Northeastern recipient was set, fall back to first available email
+        if (!recipient) {
+          for (const i of emailHeaderIndexes) {
+            const value = (dataRow[i] || "").trim();
+            if (value) {
+              recipient = value;
+              break;
+            }
           }
         }
 
@@ -597,9 +688,16 @@ document
 
         // Collect all available email addresses for this row (normalize to lowercase)
         const availableEmails = [];
+        
+        // For Northeastern domains, add the primary [last].[first_initial] email first
+        if (isNortheasternDomain && recipientEmail) {
+          availableEmails.push(recipientEmail);
+        }
+        
+        // Add all other emails from CSV columns
         emailHeaderIndexes.forEach((idx) => {
           const email = (dataRow[idx] || "").trim().toLowerCase();
-          if (email) {
+          if (email && !availableEmails.includes(email)) {
             availableEmails.push(email);
           }
         });
@@ -632,10 +730,8 @@ document
         addNortheasternButton.textContent = "Add Northeastern BCCs";
         addNortheasternButton.className = "add-northeastern-bcc-button";
         
-        // Check if there is a Domain column and if its value is northeastern.edu
-        const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
-        const hasNortheasternDomain = domainIdx !== -1 && 
-          (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
+        // Use the already declared isNortheasternDomain variable
+        const hasNortheasternDomain = isNortheasternDomain;
         
         if (hasNortheasternDomain) {
           // Try to find First Name and Last Name in headers
@@ -725,11 +821,12 @@ document
           selectDropdown.style.width = "fit-content";
 
           // Add all available emails as options
-          availableEmails.forEach((email, index) => {
+          availableEmails.forEach((email) => {
             const option = document.createElement("option");
             option.value = email;
             option.textContent = email;
-            if (index === 0) {
+            // Select the recipientEmail (Northeastern primary for NEU domains, or first email otherwise)
+            if (email === recipientEmail) {
               option.selected = true;
             }
             selectDropdown.appendChild(option);
