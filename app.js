@@ -1,5 +1,6 @@
 const path = require("node:path");
-const { app, ipcMain, BrowserWindow } = require("electron");
+const { app, ipcMain, BrowserWindow, dialog } = require("electron");
+const fs = require("fs");
 
 const AuthProvider = require("./App/AuthProvider");
 const { IPC_MESSAGES } = require("./App/constants");
@@ -144,5 +145,29 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
   } else {
     const errorData = await response.json().catch(() => ({}));
     console.error("❌ Failed to send email:", errorData);
+  }
+});
+
+// Handle save file dialog
+ipcMain.handle("save-csv-dialog", async (event, { csvContent, defaultFileName }) => {
+  const { filePath, canceled } = await dialog.showSaveDialog(win, {
+    title: "Save CSV File",
+    defaultPath: defaultFileName || "enriched_emails.csv",
+    filters: [
+      { name: "CSV Files", extensions: ["csv"] },
+      { name: "All Files", extensions: ["*"] }
+    ]
+  });
+
+  if (canceled || !filePath) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    fs.writeFileSync(filePath, csvContent, "utf8");
+    return { success: true, filePath };
+  } catch (error) {
+    console.error("Error saving CSV file:", error);
+    return { success: false, error: error.message };
   }
 });

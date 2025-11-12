@@ -1,4 +1,6 @@
 let variables = [];
+// Store preview data for each row (for CSV export)
+let previewData = {};
 
 /**
  * Generate Northeastern.edu email variations based on first and last name
@@ -484,8 +486,9 @@ document
     const subjectInput = document.getElementById("subject").value;
     const preview_list = document.getElementById("preview-list");
 
-    // Clear previous previews
+    // Clear previous previews and preview data
     preview_list.innerHTML = "";
+    previewData = {};
 
     // Get all data rows (skip header at index 0)
     if (enrichedCsvData && enrichedCsvData.length > 1) {
@@ -715,6 +718,14 @@ document
         // Remove duplicates from availableEmails
         const uniqueEmails = [...new Set(availableEmails)];
 
+        // Store preview data for this row (for CSV export)
+        previewData[i] = {
+          to: recipientEmail,
+          bcc: uniqueEmails.filter((email) => email && email !== recipientEmail),
+          subject: formattedSubject,
+          body: formattedText
+        };
+
         const bccEmailText = document.createElement("p");
         bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
           .filter((email) => email && email !== recipientEmail)
@@ -762,6 +773,14 @@ document
               bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
                 .filter((email) => email !== currentRecipient)
                 .join(", ")}`;
+              
+              // Update preview data with new BCC list
+              previewData[i] = {
+                to: currentRecipient,
+                bcc: uniqueEmails.filter((email) => email !== currentRecipient),
+                subject: formattedSubject,
+                body: formattedText
+              };
               
               // Update button to show it was clicked
               addNortheasternButton.textContent = "BCCs Added!";
@@ -844,6 +863,14 @@ document
               .filter((email) => email !== newRecipient)
               .join(", ")}`;
 
+            // Update preview data with new recipient
+            previewData[i] = {
+              to: newRecipient,
+              bcc: uniqueEmails.filter((email) => email !== newRecipient),
+              subject: formattedSubject,
+              body: formattedText
+            };
+
             // Re-enable the send button and reset its text
             sendEmailButton.textContent = "Create Email Draft";
             sendEmailButton.disabled = false;
@@ -887,10 +914,88 @@ document
       message.textContent = "No CSV data available for preview";
       preview_list.appendChild(message);
     }
-  }); // Helper function to escape special regex characters
+  });
+
+// Helper function to escape special regex characters
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-} // on page load, get emails from local storage and populate the textarea
+}
+
+// Helper function to escape CSV cell content
+function escapeCsvCell(cell) {
+  if (cell == null) return "";
+  const cellStr = String(cell);
+  if (cellStr.includes(",") || cellStr.includes('"') || cellStr.includes("\n") || cellStr.includes("\r")) {
+    return `"${cellStr.replace(/"/g, '""')}"`;
+  }
+  return cellStr;
+}
+
+// Function to save enriched CSV with To, BCC, Subject, Body columns
+async function saveAsEnrichedCSV() {
+  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+    alert("No CSV data available to export.");
+    return;
+  }
+
+  if (Object.keys(previewData).length === 0) {
+    alert("Please generate a preview first before exporting.");
+    return;
+  }
+
+  // Get original headers and add new columns
+  const originalHeaders = enrichedCsvData[0].split(",").map((h) => h.trim());
+  const newHeaders = [...originalHeaders, "To", "BCC", "Subject", "Body"];
+  
+  // Create CSV rows array
+  const csvRows = [];
+  
+  // Add header row
+  csvRows.push(newHeaders.map(h => escapeCsvCell(h)).join(","));
+  
+  // Process each data row
+  for (let i = 1; i < enrichedCsvData.length; i++) {
+    const originalRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+    
+    // Get preview data for this row
+    const rowPreview = previewData[i] || {};
+    const toEmail = rowPreview.to || "";
+    const bccEmails = rowPreview.bcc ? rowPreview.bcc.join("; ") : "";
+    const subject = rowPreview.subject || "";
+    const body = rowPreview.body || "";
+    
+    // Escape original row cells
+    const escapedOriginalRow = originalRow.map(cell => escapeCsvCell(cell));
+    
+    // Escape new columns
+    const escapedTo = escapeCsvCell(toEmail);
+    const escapedBcc = escapeCsvCell(bccEmails);
+    const escapedSubject = escapeCsvCell(subject);
+    const escapedBody = escapeCsvCell(body);
+    
+    // Combine original and new columns
+    const fullRow = [...escapedOriginalRow, escapedTo, escapedBcc, escapedSubject, escapedBody];
+    csvRows.push(fullRow.join(","));
+  }
+  
+  // Create CSV content
+  const csvContent = csvRows.join("\n");
+  
+  // Use Electron's save dialog
+  const defaultFileName = `enriched_emails_${Date.now()}.csv`;
+  const result = await window.electronAPI.saveCsvFile(csvContent, defaultFileName);
+  
+  if (result.success) {
+    alert("CSV file has been saved successfully!");
+  } else if (!result.canceled) {
+    alert("Failed to save CSV file: " + (result.error || "Unknown error"));
+  }
+}
+
+// Add Save as CSV button handler
+document.getElementById("saveAsCsv").addEventListener("click", saveAsEnrichedCSV);
+
+// on page load, get emails from local storage and populate the textarea
 window.addEventListener("DOMContentLoaded", () => {
   const emails = JSON.parse(localStorage.getItem("emails") || "[]");
   const emailsList = document.getElementById("emails-list");

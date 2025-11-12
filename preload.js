@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   onHideButton: (callback) => ipcRenderer.on("hide-button-message", callback),
 
+  saveCsvFile: (csvContent, defaultFileName) => 
+    ipcRenderer.invoke("save-csv-dialog", { csvContent, defaultFileName }),
+
   getKeys: () =>
     new Promise((resolve, reject) => {
       const fs = require("fs");
