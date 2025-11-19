@@ -10,33 +10,33 @@ let previewData = {};
  */
 function generateNortheasternEmails(firstName, lastName) {
   if (!firstName || !lastName) return [];
-  
+
   const first = firstName.toLowerCase().trim();
   const last = lastName.toLowerCase().trim();
-  
+
   const emails = [];
-  
+
   // [first_initial].[last] + @northeastern.edu
   emails.push(`${first.charAt(0)}.${last}@northeastern.edu`);
-  
+
   // [last].[first_initial] + @northeastern.edu
   emails.push(`${last}.${first.charAt(0)}@northeastern.edu`);
-  
+
   // [last].[first_2_initials] + @northeastern.edu
   if (first.length >= 2) {
     emails.push(`${last}.${first.substring(0, 2)}@northeastern.edu`);
   }
-  
+
   // [last].[first_3_initials] + @northeastern.edu
   if (first.length >= 3) {
     emails.push(`${last}.${first.substring(0, 3)}@northeastern.edu`);
   }
-  
+
   // [last].[first_N_initials] + @northeastern.edu (up to full first name)
   for (let i = 4; i <= first.length; i++) {
     emails.push(`${last}.${first.substring(0, i)}@northeastern.edu`);
   }
-  
+
   return emails;
 }
 
@@ -47,8 +47,8 @@ function generateNortheasternEmails(firstName, lastName) {
  */
 function isNortheasternEmail(email) {
   if (!email) return false;
-  const domain = email.split('@')[1];
-  return domain && domain.toLowerCase() === 'northeastern.edu';
+  const domain = email.split("@")[1];
+  return domain && domain.toLowerCase() === "northeastern.edu";
 }
 
 function normalizeCsvRows(csv) {
@@ -232,21 +232,28 @@ document.getElementById("draftAll").addEventListener("click", function () {
       .filter((idx) => idx !== -1);
 
     // Check if this is a Northeastern domain row
-    const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
-    const isNortheasternDomain = domainIdx !== -1 && 
-      (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
-    
+    const domainIdx = headers.findIndex((h) => h.toLowerCase() === "domain");
+    const isNortheasternDomain =
+      domainIdx !== -1 &&
+      (dataRow[domainIdx] || "").trim().toLowerCase() === "northeastern.edu";
+
     let recipient = "";
-    
+
     // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
     if (isNortheasternDomain) {
-      const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
-      const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
-      
+      const firstNameIdx = headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("first") && h.toLowerCase().includes("name")
+      );
+      const lastNameIdx = headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("last") && h.toLowerCase().includes("name")
+      );
+
       if (firstNameIdx !== -1 && lastNameIdx !== -1) {
         const firstName = (dataRow[firstNameIdx] || "").trim();
         const lastName = (dataRow[lastNameIdx] || "").trim();
-        
+
         if (firstName && lastName) {
           const first = firstName.toLowerCase();
           const last = lastName.toLowerCase();
@@ -257,12 +264,12 @@ document.getElementById("draftAll").addEventListener("click", function () {
 
     // Collect all available email addresses for this row (normalize to lowercase)
     const availableEmails = [];
-    
+
     // For Northeastern domains, add the primary email first
     if (isNortheasternDomain && recipient) {
       availableEmails.push(recipient);
     }
-    
+
     // Add all other emails from CSV columns
     emailHeaderIndexes.forEach((idx) => {
       const email = (dataRow[idx] || "").trim().toLowerCase();
@@ -273,7 +280,7 @@ document.getElementById("draftAll").addEventListener("click", function () {
 
     // Add northeastern BCCs if they exist for this row
     if (northeasternBccsByRow[i]) {
-      northeasternBccsByRow[i].forEach(email => {
+      northeasternBccsByRow[i].forEach((email) => {
         const lowerEmail = email.toLowerCase();
         if (!availableEmails.includes(lowerEmail)) {
           availableEmails.push(lowerEmail);
@@ -286,7 +293,7 @@ document.getElementById("draftAll").addEventListener("click", function () {
     if (!recipient) {
       recipient = uniqueEmails[0] || "";
     }
-    
+
     if (recipient) {
       // Send the email data to main process
       window.electronAPI.sendMessage("send-email", {
@@ -307,61 +314,74 @@ document.getElementById("draftAll").addEventListener("click", function () {
 let northeasternBccsByRow = {};
 
 // Add Northeastern BCCs to All button handler
-document.getElementById("addNortheasternAll").addEventListener("click", function () {
-  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
-    alert("No CSV data available. Please load data first.");
-    return;
-  }
+document
+  .getElementById("addNortheasternAll")
+  .addEventListener("click", function () {
+    if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+      alert("No CSV data available. Please load data first.");
+      return;
+    }
 
-  const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
-  
-  // Find the Domain, First Name, and Last Name column indexes
-  const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
-  const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
-  const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
-  
-  if (domainIdx === -1) {
-    alert("No 'Domain' column found in CSV data.");
-    return;
-  }
-  
-  if (firstNameIdx === -1 || lastNameIdx === -1) {
-    alert("First Name and/or Last Name columns not found in CSV data.");
-    return;
-  }
+    const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
 
-  let processedRows = 0;
-  let totalEmailsGenerated = 0;
+    // Find the Domain, First Name, and Last Name column indexes
+    const domainIdx = headers.findIndex((h) => h.toLowerCase() === "domain");
+    const firstNameIdx = headers.findIndex(
+      (h) =>
+        h.toLowerCase().includes("first") && h.toLowerCase().includes("name")
+    );
+    const lastNameIdx = headers.findIndex(
+      (h) =>
+        h.toLowerCase().includes("last") && h.toLowerCase().includes("name")
+    );
 
-  // Process each data row (skip header at index 0)
-  for (let i = 1; i < enrichedCsvData.length; i++) {
-    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
-    
-    const domain = (dataRow[domainIdx] || "").trim().toLowerCase();
-    
-    if (domain === 'northeastern.edu') {
-      const firstName = (dataRow[firstNameIdx] || "").trim();
-      const lastName = (dataRow[lastNameIdx] || "").trim();
-      
-      if (firstName && lastName) {
-        const northeasternEmails = generateNortheasternEmails(firstName, lastName);
-        
-        // Store the generated emails for this row
-        northeasternBccsByRow[i] = northeasternEmails;
-        
-        processedRows++;
-        totalEmailsGenerated += northeasternEmails.length;
+    if (domainIdx === -1) {
+      alert("No 'Domain' column found in CSV data.");
+      return;
+    }
+
+    if (firstNameIdx === -1 || lastNameIdx === -1) {
+      alert("First Name and/or Last Name columns not found in CSV data.");
+      return;
+    }
+
+    let processedRows = 0;
+    let totalEmailsGenerated = 0;
+
+    // Process each data row (skip header at index 0)
+    for (let i = 1; i < enrichedCsvData.length; i++) {
+      const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+
+      const domain = (dataRow[domainIdx] || "").trim().toLowerCase();
+
+      if (domain === "northeastern.edu") {
+        const firstName = (dataRow[firstNameIdx] || "").trim();
+        const lastName = (dataRow[lastNameIdx] || "").trim();
+
+        if (firstName && lastName) {
+          const northeasternEmails = generateNortheasternEmails(
+            firstName,
+            lastName
+          );
+
+          // Store the generated emails for this row
+          northeasternBccsByRow[i] = northeasternEmails;
+
+          processedRows++;
+          totalEmailsGenerated += northeasternEmails.length;
+        }
       }
     }
-  }
-  
-  alert(`Generated ${totalEmailsGenerated} Northeastern email variations for ${processedRows} rows! These will be included as BCCs when you send/draft emails.`);
-  
-  // Trigger a preview refresh if preview is already showing
-  if (document.getElementById("preview-list").children.length > 0) {
-    document.getElementById("preview-button").click();
-  }
-});
+
+    alert(
+      `Generated ${totalEmailsGenerated} Northeastern email variations for ${processedRows} rows! These will be included as BCCs when you send/draft emails.`
+    );
+
+    // Trigger a preview refresh if preview is already showing
+    if (document.getElementById("preview-list").children.length > 0) {
+      document.getElementById("preview-button").click();
+    }
+  });
 
 // Send All button handler
 document.getElementById("sendAll").addEventListener("click", function () {
@@ -408,21 +428,28 @@ document.getElementById("sendAll").addEventListener("click", function () {
       .filter((idx) => idx !== -1);
 
     // Check if this is a Northeastern domain row
-    const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
-    const isNortheasternDomain = domainIdx !== -1 && 
-      (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
-    
+    const domainIdx = headers.findIndex((h) => h.toLowerCase() === "domain");
+    const isNortheasternDomain =
+      domainIdx !== -1 &&
+      (dataRow[domainIdx] || "").trim().toLowerCase() === "northeastern.edu";
+
     let recipient = "";
-    
+
     // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
     if (isNortheasternDomain) {
-      const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
-      const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
-      
+      const firstNameIdx = headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("first") && h.toLowerCase().includes("name")
+      );
+      const lastNameIdx = headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("last") && h.toLowerCase().includes("name")
+      );
+
       if (firstNameIdx !== -1 && lastNameIdx !== -1) {
         const firstName = (dataRow[firstNameIdx] || "").trim();
         const lastName = (dataRow[lastNameIdx] || "").trim();
-        
+
         if (firstName && lastName) {
           const first = firstName.toLowerCase();
           const last = lastName.toLowerCase();
@@ -433,12 +460,12 @@ document.getElementById("sendAll").addEventListener("click", function () {
 
     // Collect all available email addresses for this row (normalize to lowercase)
     const availableEmails = [];
-    
+
     // For Northeastern domains, add the primary email first
     if (isNortheasternDomain && recipient) {
       availableEmails.push(recipient);
     }
-    
+
     // Add all other emails from CSV columns
     emailHeaderIndexes.forEach((idx) => {
       const email = (dataRow[idx] || "").trim().toLowerCase();
@@ -449,7 +476,7 @@ document.getElementById("sendAll").addEventListener("click", function () {
 
     // Add northeastern BCCs if they exist for this row
     if (northeasternBccsByRow[i]) {
-      northeasternBccsByRow[i].forEach(email => {
+      northeasternBccsByRow[i].forEach((email) => {
         const lowerEmail = email.toLowerCase();
         if (!availableEmails.includes(lowerEmail)) {
           availableEmails.push(lowerEmail);
@@ -462,7 +489,7 @@ document.getElementById("sendAll").addEventListener("click", function () {
     if (!recipient) {
       recipient = uniqueEmails[0] || "";
     }
-    
+
     if (recipient) {
       // Send the email immediately to main process
       window.electronAPI.sendMessage("send-mail-now", {
@@ -635,21 +662,33 @@ document
           .filter((i) => i !== -1);
 
         // Check if this is a Northeastern domain row
-        const domainIdx = headers.findIndex(h => h.toLowerCase() === 'domain');
-        const isNortheasternDomain = domainIdx !== -1 && 
-          (dataRow[domainIdx] || "").trim().toLowerCase() === 'northeastern.edu';
-        
+        const domainIdx = headers.findIndex(
+          (h) => h.toLowerCase() === "domain"
+        );
+        const isNortheasternDomain =
+          domainIdx !== -1 &&
+          (dataRow[domainIdx] || "").trim().toLowerCase() ===
+            "northeastern.edu";
+
         let recipient = "";
-        
+
         // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
         if (isNortheasternDomain) {
-          const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
-          const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
-          
+          const firstNameIdx = headers.findIndex(
+            (h) =>
+              h.toLowerCase().includes("first") &&
+              h.toLowerCase().includes("name")
+          );
+          const lastNameIdx = headers.findIndex(
+            (h) =>
+              h.toLowerCase().includes("last") &&
+              h.toLowerCase().includes("name")
+          );
+
           if (firstNameIdx !== -1 && lastNameIdx !== -1) {
             const firstName = (dataRow[firstNameIdx] || "").trim();
             const lastName = (dataRow[lastNameIdx] || "").trim();
-            
+
             if (firstName && lastName) {
               const first = firstName.toLowerCase();
               const last = lastName.toLowerCase();
@@ -657,7 +696,7 @@ document
             }
           }
         }
-        
+
         // If no Northeastern recipient was set, fall back to first available email
         if (!recipient) {
           for (const i of emailHeaderIndexes) {
@@ -691,12 +730,12 @@ document
 
         // Collect all available email addresses for this row (normalize to lowercase)
         const availableEmails = [];
-        
+
         // For Northeastern domains, add the primary [last].[first_initial] email first
         if (isNortheasternDomain && recipientEmail) {
           availableEmails.push(recipientEmail);
         }
-        
+
         // Add all other emails from CSV columns
         emailHeaderIndexes.forEach((idx) => {
           const email = (dataRow[idx] || "").trim().toLowerCase();
@@ -707,7 +746,7 @@ document
 
         // Add northeastern BCCs if they were already generated
         if (northeasternBccsByRow[i]) {
-          northeasternBccsByRow[i].forEach(email => {
+          northeasternBccsByRow[i].forEach((email) => {
             const lowerEmail = email.toLowerCase();
             if (!availableEmails.includes(lowerEmail)) {
               availableEmails.push(lowerEmail);
@@ -721,9 +760,11 @@ document
         // Store preview data for this row (for CSV export)
         previewData[i] = {
           to: recipientEmail,
-          bcc: uniqueEmails.filter((email) => email && email !== recipientEmail),
+          bcc: uniqueEmails.filter(
+            (email) => email && email !== recipientEmail
+          ),
           subject: formattedSubject,
-          body: formattedText
+          body: formattedText,
         };
 
         const bccEmailText = document.createElement("p");
@@ -740,61 +781,76 @@ document
         const addNortheasternButton = document.createElement("button");
         addNortheasternButton.textContent = "Add Northeastern BCCs";
         addNortheasternButton.className = "add-northeastern-bcc-button";
-        
+
         // Use the already declared isNortheasternDomain variable
         const hasNortheasternDomain = isNortheasternDomain;
-        
+
         if (hasNortheasternDomain) {
           // Try to find First Name and Last Name in headers
-          const firstNameIdx = headers.findIndex(h => h.toLowerCase().includes('first') && h.toLowerCase().includes('name'));
-          const lastNameIdx = headers.findIndex(h => h.toLowerCase().includes('last') && h.toLowerCase().includes('name'));
-          
+          const firstNameIdx = headers.findIndex(
+            (h) =>
+              h.toLowerCase().includes("first") &&
+              h.toLowerCase().includes("name")
+          );
+          const lastNameIdx = headers.findIndex(
+            (h) =>
+              h.toLowerCase().includes("last") &&
+              h.toLowerCase().includes("name")
+          );
+
           if (firstNameIdx !== -1 && lastNameIdx !== -1) {
             const firstName = (dataRow[firstNameIdx] || "").trim();
             const lastName = (dataRow[lastNameIdx] || "").trim();
-            
+
             addNortheasternButton.onclick = () => {
-              const northeasternEmails = generateNortheasternEmails(firstName, lastName);
-              
+              const northeasternEmails = generateNortheasternEmails(
+                firstName,
+                lastName
+              );
+
               // Store in global object so Draft All/Send All can use them
               northeasternBccsByRow[i] = northeasternEmails;
-              
+
               // Add the generated emails to availableEmails array (normalize to lowercase)
-              northeasternEmails.forEach(email => {
+              northeasternEmails.forEach((email) => {
                 const lowerEmail = email.toLowerCase();
                 if (!availableEmails.includes(lowerEmail)) {
                   availableEmails.push(lowerEmail);
                 }
               });
-              
+
               // Update BCC display
-              const currentRecipient = (selectDropdown ? selectDropdown.value : recipient).toLowerCase();
+              const currentRecipient = (
+                selectDropdown ? selectDropdown.value : recipient
+              ).toLowerCase();
               const uniqueEmails = [...new Set(availableEmails)];
               bccEmailText.textContent = `BCC Addresses: ${uniqueEmails
                 .filter((email) => email !== currentRecipient)
                 .join(", ")}`;
-              
+
               // Update preview data with new BCC list
               previewData[i] = {
                 to: currentRecipient,
                 bcc: uniqueEmails.filter((email) => email !== currentRecipient),
                 subject: formattedSubject,
-                body: formattedText
+                body: formattedText,
               };
-              
+
               // Update button to show it was clicked
               addNortheasternButton.textContent = "BCCs Added!";
               addNortheasternButton.disabled = true;
-              
+
               // Re-enable the send buttons and reset their text
               sendEmailButton.textContent = "Create Email Draft";
               sendEmailButton.disabled = false;
               sendEmailNowButton.textContent = "Send Email";
               sendEmailNowButton.disabled = false;
-              
+
               // Update the sendEmailButton's onclick to use the updated BCC list
               sendEmailButton.onclick = () => {
-                const finalRecipient = selectDropdown ? selectDropdown.value : recipient;
+                const finalRecipient = selectDropdown
+                  ? selectDropdown.value
+                  : recipient;
                 const uniqueEmails = [...new Set(availableEmails)];
                 window.electronAPI.sendMessage("send-email", {
                   recipient: finalRecipient,
@@ -807,10 +863,12 @@ document
                 sendEmailButton.textContent = "Draft Created!";
                 sendEmailButton.disabled = true;
               };
-              
+
               // Update the sendEmailNowButton's onclick to use the updated BCC list
               sendEmailNowButton.onclick = () => {
-                const finalRecipient = selectDropdown ? selectDropdown.value : recipient;
+                const finalRecipient = selectDropdown
+                  ? selectDropdown.value
+                  : recipient;
                 const uniqueEmails = [...new Set(availableEmails)];
                 window.electronAPI.sendMessage("send-mail-now", {
                   recipient: finalRecipient,
@@ -824,7 +882,7 @@ document
                 sendEmailNowButton.disabled = true;
               };
             };
-            
+
             // Add the button to the container
             buttonContainer.appendChild(addNortheasternButton);
           }
@@ -868,7 +926,7 @@ document
               to: newRecipient,
               bcc: uniqueEmails.filter((email) => email !== newRecipient),
               subject: formattedSubject,
-              body: formattedText
+              body: formattedText,
             };
 
             // Re-enable the send button and reset its text
@@ -925,7 +983,12 @@ function escapeRegExp(string) {
 function escapeCsvCell(cell) {
   if (cell == null) return "";
   const cellStr = String(cell);
-  if (cellStr.includes(",") || cellStr.includes('"') || cellStr.includes("\n") || cellStr.includes("\r")) {
+  if (
+    cellStr.includes(",") ||
+    cellStr.includes('"') ||
+    cellStr.includes("\n") ||
+    cellStr.includes("\r")
+  ) {
     return `"${cellStr.replace(/"/g, '""')}"`;
   }
   return cellStr;
@@ -946,45 +1009,54 @@ async function saveAsEnrichedCSV() {
   // Get original headers and add new columns
   const originalHeaders = enrichedCsvData[0].split(",").map((h) => h.trim());
   const newHeaders = [...originalHeaders, "To", "BCC", "Subject", "Body"];
-  
+
   // Create CSV rows array
   const csvRows = [];
-  
+
   // Add header row
-  csvRows.push(newHeaders.map(h => escapeCsvCell(h)).join(","));
-  
+  csvRows.push(newHeaders.map((h) => escapeCsvCell(h)).join(","));
+
   // Process each data row
   for (let i = 1; i < enrichedCsvData.length; i++) {
     const originalRow = enrichedCsvData[i].split(",").map((d) => d.trim());
-    
+
     // Get preview data for this row
     const rowPreview = previewData[i] || {};
     const toEmail = rowPreview.to || "";
     const bccEmails = rowPreview.bcc ? rowPreview.bcc.join("; ") : "";
     const subject = rowPreview.subject || "";
     const body = rowPreview.body || "";
-    
+
     // Escape original row cells
-    const escapedOriginalRow = originalRow.map(cell => escapeCsvCell(cell));
-    
+    const escapedOriginalRow = originalRow.map((cell) => escapeCsvCell(cell));
+
     // Escape new columns
     const escapedTo = escapeCsvCell(toEmail);
     const escapedBcc = escapeCsvCell(bccEmails);
     const escapedSubject = escapeCsvCell(subject);
     const escapedBody = escapeCsvCell(body);
-    
+
     // Combine original and new columns
-    const fullRow = [...escapedOriginalRow, escapedTo, escapedBcc, escapedSubject, escapedBody];
+    const fullRow = [
+      ...escapedOriginalRow,
+      escapedTo,
+      escapedBcc,
+      escapedSubject,
+      escapedBody,
+    ];
     csvRows.push(fullRow.join(","));
   }
-  
+
   // Create CSV content
-  const csvContent = csvRows.join("\n");
-  
+  const csvContent = "\uFEFF" + csvRows.join("\n");
+
   // Use Electron's save dialog
   const defaultFileName = `enriched_emails_${Date.now()}.csv`;
-  const result = await window.electronAPI.saveCsvFile(csvContent, defaultFileName);
-  
+  const result = await window.electronAPI.saveCsvFile(
+    csvContent,
+    defaultFileName
+  );
+
   if (result.success) {
     alert("CSV file has been saved successfully!");
   } else if (!result.canceled) {
@@ -993,7 +1065,9 @@ async function saveAsEnrichedCSV() {
 }
 
 // Add Save as CSV button handler
-document.getElementById("saveAsCsv").addEventListener("click", saveAsEnrichedCSV);
+document
+  .getElementById("saveAsCsv")
+  .addEventListener("click", saveAsEnrichedCSV);
 
 // on page load, get emails from local storage and populate the textarea
 window.addEventListener("DOMContentLoaded", () => {
