@@ -325,7 +325,7 @@ export async function fetchZeroBounce() {
       try {
         var tries = 0;
         var resultData = null;
-        const maxTries = 10; // Try for up to 25 seconds (5 * 5s)
+        const maxTries = 20; // Try for up to 100 seconds (20 * 5s)
 
         while (tries < maxTries) {
           zbEl.innerText = `Waiting for results... Attempt ${
@@ -338,10 +338,19 @@ export async function fetchZeroBounce() {
             // If we got valid data with success status, break out
             if (resultData && resultData.success) {
               break;
+            } else {
+              // If success is false, it might be processing or an error we want to retry
+              console.log(
+                `Attempt ${tries + 1}: Status not success yet.`,
+                resultData
+              );
             }
           } catch (fetchError) {
-            // If it's a JSON parse error, the file might not be ready yet
-            console.log(`Attempt ${tries + 1}: Results not ready yet`);
+            // If it's a JSON parse error or network error, just log and retry
+            console.log(
+              `Attempt ${tries + 1}: Error fetching results`,
+              fetchError
+            );
           }
 
           tries++;
@@ -351,7 +360,7 @@ export async function fetchZeroBounce() {
           handleZeroBounceResults(resultData);
         } else {
           zbEl.innerText =
-            "Timeout waiting for Zero Bounce results. Please try again later.";
+            "Timeout or error waiting for Zero Bounce results. Please try again later.";
         }
       } catch (error) {
         console.error("Error fetching Zero Bounce results:", error);

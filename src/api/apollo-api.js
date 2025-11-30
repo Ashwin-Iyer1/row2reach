@@ -36,15 +36,18 @@ export function getApolloDetailsFromCsvRows(rows) {
   const linkedinIndex = findColumnIndex(headers, "linkedin");
 
   // If we don't have a name column but have first/last name, we'll combine them
-  const needsToCombineNames = nameIndex < 0 && (firstNameIndex >= 0 || lastNameIndex >= 0);
+  const needsToCombineNames =
+    nameIndex < 0 && (firstNameIndex >= 0 || lastNameIndex >= 0);
 
   return rows.slice(1).map((line) => {
     const columns = parseRowColumns(line);
 
     let fullName;
     if (needsToCombineNames) {
-      const firstName = firstNameIndex >= 0 ? (columns[firstNameIndex] || "").trim() : "";
-      const lastName = lastNameIndex >= 0 ? (columns[lastNameIndex] || "").trim() : "";
+      const firstName =
+        firstNameIndex >= 0 ? (columns[firstNameIndex] || "").trim() : "";
+      const lastName =
+        lastNameIndex >= 0 ? (columns[lastNameIndex] || "").trim() : "";
       fullName = [firstName, lastName].filter(Boolean).join(" ");
     } else {
       fullName = nameIndex >= 0 ? columns[nameIndex] : undefined;
@@ -54,7 +57,10 @@ export function getApolloDetailsFromCsvRows(rows) {
       name: fullName,
       organization_name:
         organizationIndex >= 0 ? columns[organizationIndex] : undefined,
-      linkedin_url: linkedinIndex >= 0 ? columns[linkedinIndex] : undefined,
+      linkedin_url:
+        linkedinIndex >= 0 && columns[linkedinIndex]
+          ? columns[linkedinIndex]
+          : undefined,
     };
   });
 }
@@ -103,7 +109,12 @@ export function applyApolloMatchesToCsv(originalRows, matchesList) {
     const dataRowIndex = index + 1;
     if (dataRowIndex < rows.length) {
       const email = match && match.email ? match.email : "";
-      rows[dataRowIndex] = setEmailInRow(rows[0], rows[dataRowIndex], email, "Apollo Email");
+      rows[dataRowIndex] = setEmailInRow(
+        rows[0],
+        rows[dataRowIndex],
+        email,
+        "Apollo Email"
+      );
     }
   });
 
@@ -129,7 +140,12 @@ export function applyApolloMatchesToCsvChunk(
     const dataRowIndex = startDataRowIndex + idx;
     if (dataRowIndex < rows.length) {
       const email = match && match.email ? match.email : "";
-      rows[dataRowIndex] = setEmailInRow(rows[0], rows[dataRowIndex], email, "Apollo Email");
+      rows[dataRowIndex] = setEmailInRow(
+        rows[0],
+        rows[dataRowIndex],
+        email,
+        "Apollo Email"
+      );
     }
   });
 
@@ -234,8 +250,7 @@ export async function fetchApollo() {
     }
 
     const emails = extractEmailsFromMatches(allMatches);
-    const emailText =
-      emails.length > 0 ? emails.join(", ") : "No emails found";
+    const emailText = emails.length > 0 ? emails.join(", ") : "No emails found";
     replaceText("apollo-data", emailText);
     console.log("Apollo completed. Emails:", emailText);
   } catch (error) {
