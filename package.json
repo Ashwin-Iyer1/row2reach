@@ -2,6 +2,10 @@
   "name": "Row_2_Reach",
   "version": "1.0.0",
   "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ashwin-Iyer1/row2reach"
+  },
   "build": {
     "extraResources": [
       "./extraResources/config.json"
@@ -32,6 +36,7 @@
     "electron-json-storage": "^4.6.0",
     "express": "^5.1.0",
     "isomorphic-fetch": "^3.0.0",
-    "papaparse": "^5.5.3"
+    "papaparse": "^5.5.3",
+    "update-electron-app": "^3.1.1"
   }
 }

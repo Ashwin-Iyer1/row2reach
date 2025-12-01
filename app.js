@@ -1,6 +1,17 @@
 const path = require("node:path");
-const { app, ipcMain, BrowserWindow, dialog } = require("electron");
+const {
+  app,
+  ipcMain,
+  BrowserWindow,
+  dialog,
+  Menu,
+  autoUpdater,
+} = require("electron");
 const fs = require("fs");
+
+// Initialize auto-updates
+const { updateElectronApp } = require("update-electron-app");
+updateElectronApp();
 
 const AuthProvider = require("./App/AuthProvider");
 const { IPC_MESSAGES } = require("./App/constants");
@@ -20,6 +31,90 @@ function createWindow() {
   });
   authProvider = new AuthProvider(msalConfig);
   win.loadFile("index.html");
+
+  // Create custom menu
+  const template = [
+    {
+      label: app.name,
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        {
+          label: "Check for Updates...",
+          click: () => {
+            autoUpdater.checkForUpdates();
+          },
+        },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "pasteAndMatchStyle" },
+        { role: "delete" },
+        { role: "selectAll" },
+        { type: "separator" },
+        {
+          label: "Speech",
+          submenu: [{ role: "startSpeaking" }, { role: "stopSpeaking" }],
+        },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+      ],
+    },
+    {
+      label: "Window",
+      submenu: [
+        { role: "minimize" },
+        { role: "zoom" },
+        { type: "separator" },
+        { role: "front" },
+        { type: "separator" },
+        { role: "window" },
+      ],
+    },
+    {
+      role: "help",
+      submenu: [
+        {
+          label: "Learn More",
+          click: async () => {
+            const { shell } = require("electron");
+            await shell.openExternal("https://electronjs.org");
+          },
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 ipcMain.on("navigate-to", (event, page) => {
   if (win) {
@@ -80,7 +175,7 @@ ipcMain.on(IPC_MESSAGES.SENDEMAIL, async (event, emailParams) => {
         },
       },
     ],
-    bccRecipients: (emailParams.bcc || []).map(email => ({
+    bccRecipients: (emailParams.bcc || []).map((email) => ({
       emailAddress: {
         address: email,
       },
@@ -125,7 +220,7 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
           },
         },
       ],
-      bccRecipients: (emailParams.bcc || []).map(email => ({
+      bccRecipients: (emailParams.bcc || []).map((email) => ({
         emailAddress: {
           address: email,
         },
@@ -149,25 +244,28 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
 });
 
 // Handle save file dialog
-ipcMain.handle("save-csv-dialog", async (event, { csvContent, defaultFileName }) => {
-  const { filePath, canceled } = await dialog.showSaveDialog(win, {
-    title: "Save CSV File",
-    defaultPath: defaultFileName || "enriched_emails.csv",
-    filters: [
-      { name: "CSV Files", extensions: ["csv"] },
-      { name: "All Files", extensions: ["*"] }
-    ]
-  });
+ipcMain.handle(
+  "save-csv-dialog",
+  async (event, { csvContent, defaultFileName }) => {
+    const { filePath, canceled } = await dialog.showSaveDialog(win, {
+      title: "Save CSV File",
+      defaultPath: defaultFileName || "enriched_emails.csv",
+      filters: [
+        { name: "CSV Files", extensions: ["csv"] },
+        { name: "All Files", extensions: ["*"] },
+      ],
+    });
 
-  if (canceled || !filePath) {
-    return { success: false, canceled: true };
-  }
+    if (canceled || !filePath) {
+      return { success: false, canceled: true };
+    }
 
-  try {
-    fs.writeFileSync(filePath, csvContent, "utf8");
-    return { success: true, filePath };
-  } catch (error) {
-    console.error("Error saving CSV file:", error);
-    return { success: false, error: error.message };
+    try {
+      fs.writeFileSync(filePath, csvContent, "utf8");
+      return { success: true, filePath };
+    } catch (error) {
+      console.error("Error saving CSV file:", error);
+      return { success: false, error: error.message };
+    }
   }
-});
+);
