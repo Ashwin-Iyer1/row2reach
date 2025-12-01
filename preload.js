@@ -1,6 +1,11 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, app } = require("electron");
 const storage = require("electron-json-storage");
 const path = require("path");
+const os = require("os");
+
+// Set storage path explicitly
+const userDataPath = path.join(os.homedir(), ".row2reach");
+storage.setDataPath(userDataPath);
 
 contextBridge.exposeInMainWorld("electronAPI", {
   navigateTo: (page) => ipcRenderer.send("navigate-to", page),
@@ -12,7 +17,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   onHideButton: (callback) => ipcRenderer.on("hide-button-message", callback),
 
-  saveCsvFile: (csvContent, defaultFileName) => 
+  saveCsvFile: (csvContent, defaultFileName) =>
     ipcRenderer.invoke("save-csv-dialog", { csvContent, defaultFileName }),
 
   getKeys: () =>
@@ -37,6 +42,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
           if (error) return reject(error);
           resolve(data);
         });
+      });
+    }),
+
+  saveConfig: (config) =>
+    new Promise((resolve, reject) => {
+      storage.set("data/config.json", config, (error) => {
+        if (error) return reject(error);
+        resolve();
+      });
+    }),
+
+  checkConfig: () =>
+    new Promise((resolve, reject) => {
+      storage.get("data/config.json", (error, data) => {
+        if (error) return reject(error);
+        // Check if config has required keys
+        const hasConfig = data && data.APOLLO_KEY && data.ZEROBOUNCE_KEY;
+        resolve(hasConfig);
       });
     }),
 });

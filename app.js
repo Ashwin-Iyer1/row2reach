@@ -16,6 +16,12 @@ updateElectronApp();
 const AuthProvider = require("./App/AuthProvider");
 const { IPC_MESSAGES } = require("./App/constants");
 const { protectedResources, msalConfig } = require("./App/authConfig.js");
+const storage = require("electron-json-storage");
+const os = require("os");
+
+// Set storage path to match preload.js
+const userDataPath = path.join(os.homedir(), ".row2reach");
+storage.setDataPath(userDataPath);
 
 let win;
 
@@ -30,7 +36,9 @@ function createWindow() {
     },
   });
   authProvider = new AuthProvider(msalConfig);
-  win.loadFile("index.html");
+
+  // Check if config exists before loading main page
+  checkAndLoadPage();
 
   // Create custom menu
   const template = [
@@ -116,6 +124,20 @@ function createWindow() {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
+
+// Check config and load appropriate page
+function checkAndLoadPage() {
+  storage.get("data/config.json", (error, data) => {
+    const hasConfig = !error && data && data.APOLLO_KEY && data.ZEROBOUNCE_KEY;
+
+    if (hasConfig) {
+      win.loadFile("index.html");
+    } else {
+      win.loadFile("config.html");
+    }
+  });
+}
+
 ipcMain.on("navigate-to", (event, page) => {
   if (win) {
     win.loadFile(page);

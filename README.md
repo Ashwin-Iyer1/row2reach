@@ -5,7 +5,7 @@ A powerful Electron desktop application for enriching CSV data with email addres
 ## Features
 
 - **CSV File Processing**: Upload and visualize CSV files with contact information
-- **Email Enrichment**: 
+- **Email Enrichment**:
   - Fetch emails using Apollo API based on name, organization, and LinkedIn profiles
   - Fetch emails using ContactOut API based on LinkedIn profiles
 - **Bulk Email Campaigns**: Send personalized emails to enriched contact lists
@@ -24,22 +24,26 @@ A powerful Electron desktop application for enriching CSV data with email addres
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/Ashwin-Iyer1/row2reach.git
 cd row2reach
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up your API configuration:
+
 ```bash
 cp data/config.json.example data/config.json
 ```
 
 4. Edit `data/config.json` with your API keys:
+
 ```json
 {
   "APOLLO_KEY": "your_apollo_api_key_here",
@@ -65,6 +69,7 @@ Your CSV file should contain the following columns for optimal results:
 - Any additional columns you want to use as email template variables
 
 Example CSV format:
+
 ```csv
 Name,Organization,LinkedIn,Title
 John Doe,Acme Corp,https://linkedin.com/in/johndoe,Software Engineer
@@ -74,13 +79,13 @@ Jane Smith,Tech Inc,https://linkedin.com/in/janesmith,Product Manager
 ### Workflow
 
 1. **Upload CSV**: Click the file input area to select your CSV file
-2. **Enrich Data**: 
+2. **Enrich Data**:
    - Click "Fetch Apollo" to get emails based on name and organization
    - Click "Fetch Contact Out" to get emails from LinkedIn profiles
    - Click "Fetch All" to run both services
 3. **Review Results**: View the enriched data in the table
 4. **Send Emails**: Click "Email Users" to access the email composer
-5. **Compose Campaign**: 
+5. **Compose Campaign**:
    - Write your subject and message using variables like `{Name}`, `{Organization}`
    - Preview emails to see how variables will be replaced
    - Send personalized emails to your contacts
@@ -103,16 +108,92 @@ Your Name
 ### Building for Distribution
 
 #### macOS (ARM64):
+
 ```bash
 npm run buildMac
 ```
 
+The built application will be in `release-builds/Row_2_Reach-darwin-arm64/`.
+
 #### Windows:
+
 ```bash
+# Step 1: Build the Windows app
 npm run buildWin
+
+# Step 2: Create the installer (requires Wine on macOS, or run on Windows)
+npm run create-installer
 ```
 
-Built applications will be available in the `release-builds` directory.
+The portable Windows app will be in `release-builds/Row_2_Reach-win32-x64/`, and the installer files will be in `release-builds/installers/`.
+
+### Publishing Releases for Auto-Updates
+
+This application supports automatic updates via GitHub Releases using `update-electron-app`.
+
+#### Prerequisites
+
+- **macOS**: Applications must be code-signed and notarized for auto-updates to work
+- **Windows**: Code signing is highly recommended (app will work but show warnings without it)
+- **GitHub**: Ensure your repository URL is set correctly in `package.json`
+
+#### Publishing a macOS Release
+
+1. Build the macOS application:
+
+   ```bash
+   npm run buildMac
+   ```
+
+2. **Code sign and notarize** the `.app` bundle (required for auto-updates):
+
+   ```bash
+   # This requires an Apple Developer account and certificate
+   # See: https://www.electron.build/code-signing
+   ```
+
+3. Create a `.zip` of the signed `.app` bundle:
+
+   ```bash
+   cd release-builds/Row_2_Reach-darwin-arm64
+   zip -r Row_2_Reach-darwin-arm64.zip "Row 2 Reach.app"
+   ```
+
+4. Go to your GitHub repository and create a new release:
+   - Click "Releases" → "Draft a new release"
+   - Create a new tag (e.g., `v1.0.0`)
+   - Upload `Row_2_Reach-darwin-arm64.zip`
+   - Publish the release
+
+#### Publishing a Windows Release
+
+1. Build the Windows application:
+
+   ```bash
+   npm run buildWin
+   ```
+
+2. Create the installer:
+
+   ```bash
+   npm run create-installer
+   ```
+
+3. Go to your GitHub repository and create a new release (or add to the existing release):
+   - Upload the following files from `release-builds/installers/`:
+     - `Row2ReachSetup.exe` - The installer executable
+     - `RELEASES` - Metadata file (required for auto-updates)
+     - `Row_2_Reach-<version>-full.nupkg` - Full package file
+   - Publish the release
+
+#### Testing Auto-Updates
+
+1. Install the application from the release
+2. In the application menu, click "Check for Updates..."
+3. Publish a new release with a higher version number
+4. The app should detect and download the update automatically
+
+**Note**: Auto-updates only work in production builds, not in development mode (`npm start`).
 
 ## Project Structure
 
@@ -135,11 +216,13 @@ electron-app/
 ## API Integration
 
 ### Apollo API
+
 - Endpoint: `https://api.apollo.io/api/v1/people/bulk_match`
 - Matches contacts based on name, organization, and LinkedIn URL
 - Adds "Apollo Email" column to your CSV
 
 ### ContactOut API
+
 - Endpoint: `https://api.contactout.com/v1/people/linkedin/batch`
 - Finds emails based on LinkedIn profile URLs
 - Adds "ContactOut Email" column to your CSV
@@ -153,6 +236,7 @@ electron-app/
 ## Development
 
 ### File Structure
+
 - `app.js`: Main Electron application setup
 - `preload.js`: Secure bridge between main and renderer processes
 - `buttons.js`: Handles API calls and data enrichment
@@ -160,6 +244,7 @@ electron-app/
 - `file-input.js`: CSV file processing and table rendering
 
 ### Adding New Features
+
 1. Add UI elements in HTML files
 2. Implement functionality in respective JS files
 3. Use `electronAPI` for secure communication with main process
@@ -175,7 +260,9 @@ electron-app/
 **No emails found**: Verify your CSV contains the required columns (Name, Organization, LinkedIn).
 
 ### Debug Mode
+
 Run the application with developer tools:
+
 ```bash
 npm start
 # Then press Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (macOS)

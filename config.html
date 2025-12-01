@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Row 2 Reach - Configuration</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-logo" aria-hidden="true"></div>
+          <h1>Row 2 Reach</h1>
+        </div>
+      </header>
+
+      <section class="config-section card">
+        <h2>API Configuration</h2>
+        <p class="config-description">
+          Set up your API keys to get started. You can either drag and drop a
+          JSON configuration file or enter your keys manually.
+        </p>
+
+        <!-- Drag and Drop Zone -->
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-zone-content">
+            <svg
+              class="drop-zone-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+            <p class="drop-zone-text">Drop your config.json file here</p>
+            <p class="drop-zone-subtext">or click to browse</p>
+            <input
+              type="file"
+              id="file-input"
+              accept=".json"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <div class="divider">
+          <span>OR</span>
+        </div>
+
+        <!-- Manual Input Form -->
+        <form id="config-form" class="config-form">
+          <div class="form-group">
+            <label for="apollo-key">Apollo API Key</label>
+            <input
+              type="text"
+              id="apollo-key"
+              name="apollo-key"
+              placeholder="Enter your Apollo API key"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="zerobounce-key">ZeroBounce API Key</label>
+            <input
+              type="text"
+              id="zerobounce-key"
+              name="zerobounce-key"
+              placeholder="Enter your ZeroBounce API key"
+              required
+            />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              Save Configuration
+            </button>
+          </div>
+        </form>
+
+        <div id="config-status" class="config-status"></div>
+      </section>
+    </main>
+    <script src="config.js"></script>
+  </body>
+</html>
