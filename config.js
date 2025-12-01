@@ -7,6 +7,24 @@ const zeroBounceKeyInput = document.getElementById("zerobounce-key");
 const configStatus = document.getElementById("config-status");
 const closeButton = document.getElementById("close-config");
 
+// Load existing config on page load
+async function loadExistingConfig() {
+  try {
+    const config = await window.electronAPI.getKeys();
+    if (config && config.APOLLO_KEY) {
+      apolloKeyInput.value = config.APOLLO_KEY;
+    }
+    if (config && config.ZEROBOUNCE_KEY) {
+      zeroBounceKeyInput.value = config.ZEROBOUNCE_KEY;
+    }
+  } catch (error) {
+    console.log("No existing config found");
+  }
+}
+
+// Load config when page loads
+loadExistingConfig();
+
 // Close button handler
 closeButton.addEventListener("click", () => {
   window.electronAPI.navigateTo("index.html");
