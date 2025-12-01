@@ -5,7 +5,7 @@ const resultPromise = electronInstaller.createWindowsInstaller({
   appDirectory: "./release-builds/Row_2_Reach-win32-x64",
   outputDirectory: "./release-builds/installers",
   authors: "Ashwin Iyer",
-  exe: "Row 2 Reach.exe",
+  exe: "Row_2_Reach.exe",
   setupExe: "Row2ReachSetup.exe",
   noMsi: true,
   setupIcon: "./assets/icon.ico",
