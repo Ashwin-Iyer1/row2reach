@@ -54,6 +54,15 @@ function createWindow() {
           },
         },
         { type: "separator" },
+        {
+          label: "Edit API Keys...",
+          click: () => {
+            if (win) {
+              win.loadFile("config.html");
+            }
+          },
+        },
+        { type: "separator" },
         { role: "services" },
         { type: "separator" },
         { role: "hide" },
