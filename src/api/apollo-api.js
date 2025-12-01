@@ -32,8 +32,12 @@ export function getApolloDetailsFromCsvRows(rows) {
   let nameIndex = findColumnIndex(headers, "full name");
   const firstNameIndex = findColumnIndex(headers, "first name");
   const lastNameIndex = findColumnIndex(headers, "last name");
-  const organizationIndex = findColumnIndex(headers, "organization");
+  let organizationIndex = findColumnIndex(headers, "organization");
+  if (organizationIndex < 0) {
+    organizationIndex = findColumnIndex(headers, "company");
+  }
   const linkedinIndex = findColumnIndex(headers, "linkedin");
+  const domainIndex = findColumnIndex(headers, "domain");
 
   // If we don't have a name column but have first/last name, we'll combine them
   const needsToCombineNames =
@@ -53,7 +57,7 @@ export function getApolloDetailsFromCsvRows(rows) {
       fullName = nameIndex >= 0 ? columns[nameIndex] : undefined;
     }
 
-    return {
+    const detail = {
       name: fullName,
       organization_name:
         organizationIndex >= 0 ? columns[organizationIndex] : undefined,
@@ -62,6 +66,13 @@ export function getApolloDetailsFromCsvRows(rows) {
           ? columns[linkedinIndex]
           : undefined,
     };
+
+    // Add domain if it exists
+    if (domainIndex >= 0 && columns[domainIndex]) {
+      detail.domain = columns[domainIndex];
+    }
+
+    return detail;
   });
 }
 
