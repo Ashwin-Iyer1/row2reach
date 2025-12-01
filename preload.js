@@ -22,25 +22,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getKeys: () =>
     new Promise((resolve, reject) => {
-      const fs = require("fs");
-      const configPath = path.join(__dirname, "data", "config.json");
-      fs.readFile(configPath, "utf8", (err, fileContents) => {
-        if (!err) {
+      // First try to get from user storage (where we save it)
+      storage.get("data/config.json", (error, data) => {
+        if (!error && data && Object.keys(data).length > 0) {
+          return resolve(data);
+        }
+
+        // Fallback: Try to read from app folder (dev mode or pre-bundled)
+        const fs = require("fs");
+        const configPath = path.join(__dirname, "data", "config.json");
+
+        fs.readFile(configPath, "utf8", (err, fileContents) => {
+          if (err) {
+            // If both fail, resolve with empty object or reject
+            console.warn("Config not found in storage or app folder");
+            return resolve({});
+          }
+
           try {
             const parsed = JSON.parse(fileContents);
-            return resolve(parsed);
+            resolve(parsed);
           } catch (parseErr) {
-            console.warn(
-              "Failed to parse data/config.json from app folder:",
-              parseErr
-            );
-            // fall through to storage fallback
+            console.warn("Failed to parse app config:", parseErr);
+            resolve({});
           }
-        }
-        // fallback to electron-json-storage
-        storage.get("data/config.json", (error, data) => {
-          if (error) return reject(error);
-          resolve(data);
         });
       });
     }),
