@@ -3,19 +3,24 @@
  * Imports and initializes all modules
  */
 
-import { initializeStateListeners, setEnrichedCsvData } from "./state/app-state.js";
+import {
+  initializeStateListeners,
+  setEnrichedCsvData,
+} from "./state/app-state.js";
 import { displayCsvAsTable } from "./utils/table-builder.js";
 import { normalizeCsvRows } from "./utils/csv-utils.js";
 import {
   initializeEventListeners,
   initializePageLoadHandler,
 } from "./handlers/event-handlers.js";
+import { initializeUpdateHandlers } from "./handlers/update-handler.js";
 
 // Initialize state management
 initializeStateListeners();
 
 // Initialize event listeners
 initializeEventListeners();
+initializeUpdateHandlers();
 
 // Initialize page load handler
 initializePageLoadHandler(setEnrichedCsvData, displayCsvAsTable);

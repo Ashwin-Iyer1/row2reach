@@ -62,4 +62,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
         resolve(hasConfig);
       });
     }),
+
+  onUpdateStatus: (callback) =>
+    ipcRenderer.on("update-status", (event, data) => callback(data)),
 });

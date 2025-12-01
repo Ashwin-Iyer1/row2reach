@@ -48,6 +48,41 @@
         <button id="fetch-all-button" class="btn">Fetch All</button>
       </div>
       <p>Made with love by Ashwin Iyer</p>
+
+      <!-- Update Status Modal -->
+      <div id="update-modal" class="modal" style="display: none">
+        <div class="modal-content card">
+          <div class="modal-header">
+            <h3 id="update-title">Checking for Updates</h3>
+            <button id="close-update-modal" class="close-button" title="Close">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p id="update-message">Please wait...</p>
+            <div
+              id="update-progress"
+              class="progress-bar-container"
+              style="display: none"
+            >
+              <div class="progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
     <script src="file-input.js"></script>
     <script type="module" src="src/main.js"></script>

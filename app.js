@@ -20,6 +20,31 @@ updateElectronApp({
   logger: require("electron-log"),
 });
 
+// Auto-updater events
+autoUpdater.on("checking-for-update", () => {
+  if (win) win.webContents.send("update-status", { status: "checking" });
+});
+
+autoUpdater.on("update-available", () => {
+  if (win) win.webContents.send("update-status", { status: "available" });
+});
+
+autoUpdater.on("update-not-available", () => {
+  if (win) win.webContents.send("update-status", { status: "not-available" });
+});
+
+autoUpdater.on("error", (err) => {
+  if (win)
+    win.webContents.send("update-status", {
+      status: "error",
+      error: err.message,
+    });
+});
+
+autoUpdater.on("update-downloaded", () => {
+  if (win) win.webContents.send("update-status", { status: "downloaded" });
+});
+
 const AuthProvider = require("./App/AuthProvider");
 const { IPC_MESSAGES } = require("./App/constants");
 const { protectedResources, msalConfig } = require("./App/authConfig.js");
