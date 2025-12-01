@@ -137,7 +137,14 @@ function createWindow() {
 // Check config and load appropriate page
 function checkAndLoadPage() {
   storage.get("data/config.json", (error, data) => {
-    const hasConfig = !error && data && data.APOLLO_KEY && data.ZEROBOUNCE_KEY;
+    // Check if config exists and has required keys
+    // electron-json-storage returns {} for non-existent files
+    const hasConfig =
+      !error &&
+      data &&
+      Object.keys(data).length > 0 &&
+      data.APOLLO_KEY &&
+      data.ZEROBOUNCE_KEY;
 
     if (hasConfig) {
       win.loadFile("index.html");

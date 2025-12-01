@@ -5,6 +5,12 @@ const configForm = document.getElementById("config-form");
 const apolloKeyInput = document.getElementById("apollo-key");
 const zeroBounceKeyInput = document.getElementById("zerobounce-key");
 const configStatus = document.getElementById("config-status");
+const closeButton = document.getElementById("close-config");
+
+// Close button handler
+closeButton.addEventListener("click", () => {
+  window.electronAPI.navigateTo("index.html");
+});
 
 // Drag and drop handlers
 dropZone.addEventListener("click", () => {
