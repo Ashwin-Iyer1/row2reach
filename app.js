@@ -16,7 +16,9 @@ if (require("electron-squirrel-startup")) {
 
 // Initialize auto-updates
 const { updateElectronApp } = require("update-electron-app");
-updateElectronApp();
+updateElectronApp({
+  logger: require("electron-log"),
+});
 
 const AuthProvider = require("./App/AuthProvider");
 const { IPC_MESSAGES } = require("./App/constants");
