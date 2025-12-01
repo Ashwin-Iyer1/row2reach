@@ -1,6 +1,6 @@
 {
   "name": "Row_2_Reach",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "app.js",
   "repository": {
     "type": "git",
@@ -36,6 +36,7 @@
     "@types/papaparse": "^5.3.16",
     "dotenv": "^17.2.2",
     "electron-json-storage": "^4.6.0",
+    "electron-squirrel-startup": "^1.0.1",
     "express": "^5.1.0",
     "isomorphic-fetch": "^3.0.0",
     "papaparse": "^5.5.3",
