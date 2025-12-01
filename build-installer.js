@@ -7,8 +7,8 @@ const resultPromise = electronInstaller.createWindowsInstaller({
   authors: "Ashwin Iyer",
   exe: "Row 2 Reach.exe",
   setupExe: "Row2ReachSetup.exe",
-  setupIcon: "./assets/icon.png",
   noMsi: true,
+  setupIcon: "./assets/icon.ico",
 });
 
 resultPromise.then(
