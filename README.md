@@ -1,65 +1,47 @@
 # Row 2 Reach
 
-A powerful Electron desktop application for enriching CSV data with email addresses from Apollo and ContactOut APIs, and sending personalized bulk emails.
+A powerful Electron desktop application for enriching CSV data with email addresses from Apollo and ZeroBounce APIs, and sending personalized bulk emails.
 
 ## Features
 
 - **CSV File Processing**: Upload and visualize CSV files with contact information
 - **Email Enrichment**:
-  - Fetch emails using Apollo API based on name, organization, and LinkedIn profiles
-  - Fetch emails using ContactOut API based on LinkedIn profiles
-- **Bulk Email Campaigns**: Send personalized emails to enriched contact lists
+  - **Apollo**: Fetch emails using Apollo API based on name, organization, and LinkedIn profiles
+  - **ZeroBounce**: Validate and enrich email data
+- **Bulk Email Campaigns**: Send personalized emails to enriched contact lists via Microsoft Graph
 - **Variable Templates**: Use CSV column data as variables in email templates
 - **Data Export**: Download enriched CSV files with new email columns
 - **Modern UI**: Clean, responsive interface with dark/light mode support
 
-## Prerequisites
-
-- Node.js (v14 or higher)
-- npm or yarn
-- API keys for:
-  - [Apollo.io](https://apollo.io) (for email enrichment)
-  - [ContactOut](https://contactout.com) (for LinkedIn-based email enrichment)
-
 ## Installation
 
-1. Clone the repository:
+### Windows
 
-```bash
-git clone https://github.com/Ashwin-Iyer1/row2reach.git
-cd row2reach
-```
+1. Download the latest installer (`Row2ReachSetup.exe`) from the [Releases](https://github.com/Ashwin-Iyer1/row2reach/releases) page.
+2. Double-click the installer to run it.
+3. The application will install and launch automatically. A shortcut will be created on your desktop.
 
-2. Install dependencies:
+### macOS (Apple Silicon)
 
-```bash
-npm install
-```
+1. Download the latest release zip (`Row_2_Reach-darwin-arm64.zip`) from the [Releases](https://github.com/Ashwin-Iyer1/row2reach/releases) page.
+2. Unzip the file to extract `Row 2 Reach.app`.
+3. Drag and drop `Row 2 Reach.app` into your **Applications** folder.
+4. Double-click to launch.
 
-3. Set up your API configuration:
+## Configuration
 
-```bash
-cp data/config.json.example data/config.json
-```
+On your first launch, the application will ask for your API keys. You can enter them manually or drag and drop a `config.json` file.
 
-4. Edit `data/config.json` with your API keys:
+You will need:
 
-```json
-{
-  "APOLLO_KEY": "your_apollo_api_key_here",
-  "CONTACTOUT_KEY": "your_contactout_api_key_here"
-}
-```
+1. **Apollo API Key**: Available from your [Apollo.io](https://apollo.io) account settings.
+2. **ZeroBounce API Key**: Available from your [ZeroBounce](https://www.zerobounce.net) dashboard.
+
+Once saved, these keys are stored securely on your local machine. You can edit them later via the application menu (`Row 2 Reach` > `Edit API Keys...`).
 
 ## Usage
 
-### Starting the Application
-
-```bash
-npm start
-```
-
-### CSV Format Requirements
+### 1. Prepare Your Data
 
 Your CSV file should contain the following columns for optimal results:
 
@@ -68,7 +50,7 @@ Your CSV file should contain the following columns for optimal results:
 - **LinkedIn**: LinkedIn profile URL
 - Any additional columns you want to use as email template variables
 
-Example CSV format:
+**Example CSV:**
 
 ```csv
 Name,Organization,LinkedIn,Title
@@ -76,38 +58,72 @@ John Doe,Acme Corp,https://linkedin.com/in/johndoe,Software Engineer
 Jane Smith,Tech Inc,https://linkedin.com/in/janesmith,Product Manager
 ```
 
-### Workflow
+### 2. Workflow
 
-1. **Upload CSV**: Click the file input area to select your CSV file
+1. **Upload CSV**: Drag and drop your CSV file into the application window or click to browse.
 2. **Enrich Data**:
-   - Click "Fetch Apollo" to get emails based on name and organization
-   - Click "Fetch Contact Out" to get emails from LinkedIn profiles
-   - Click "Fetch All" to run both services
-3. **Review Results**: View the enriched data in the table
-4. **Send Emails**: Click "Email Users" to access the email composer
-5. **Compose Campaign**:
-   - Write your subject and message using variables like `{Name}`, `{Organization}`
-   - Preview emails to see how variables will be replaced
-   - Send personalized emails to your contacts
+   - Click **Fetch Apollo** to find emails based on name and organization.
+   - Click **Fetch Zero Bounce** to validate emails and find additional data.
+   - Click **Fetch All** to run both services sequentially.
+3. **Review Results**: The table will update with new columns like `Apollo Email` and `ZeroBounce Status`.
+4. **Export**: Click **Download CSV** to save the enriched data.
 
-### Email Templates
+### 3. Sending Emails
 
-Use CSV column headers as variables in your email templates:
+1. Click **Email Users** to open the email composer.
+2. **Sign In**: Click **Sign in using Popup** to authenticate with your Microsoft (Outlook/Office 365) account.
+3. **Compose**:
 
+   - Write your subject and message.
+   - Use variables from your CSV columns by wrapping headers in curly braces, e.g., `{Name}`, `{Organization}`.
+
+   **Template Example:**
+
+   ```text
+   Hi {Name},
+
+   I saw you are working at {Organization} as a {Title}.
+   ```
+
+4. **Preview & Send**:
+   - Click **Preview** to see how the variables render for the first few contacts.
+   - Click **Send All** to send the campaign.
+   - Click **Draft All** to create drafts in your "Drafts" folder instead of sending immediately.
+
+---
+
+## Development & Build Instructions
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Ashwin-Iyer1/row2reach.git
+   cd row2reach
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+### Development Mode
+
+Run the application locally with hot-reload (if configured) or standard electron start:
+
+```bash
+npm start
 ```
-Subject: Hi {Name}, opportunity at {Organization}
 
-Hi {Name},
-
-I hope this email finds you well. I noticed your work at {Organization} and wanted to reach out about an exciting opportunity...
-
-Best regards,
-Your Name
-```
+_Note: In development, you can use a `data/config.json` file (copy from `data/config.json.example`) or use the in-app configuration page._
 
 ### Building for Distribution
 
-#### macOS (ARM64):
+#### macOS (ARM64)
 
 ```bash
 npm run buildMac
@@ -115,149 +131,68 @@ npm run buildMac
 
 The built application will be in `release-builds/Row_2_Reach-darwin-arm64/`.
 
-#### Windows:
+#### Windows
 
 ```bash
 # Step 1: Build the Windows app
 npm run buildWin
 
-# Step 2: Create the installer (requires Wine on macOS, or run on Windows)
+# Step 2: Create the installer (requires Windows or Wine)
 npm run create-installer
 ```
 
 The portable Windows app will be in `release-builds/Row_2_Reach-win32-x64/`, and the installer files will be in `release-builds/installers/`.
 
-### Publishing Releases for Auto-Updates
+### Publishing Releases (Auto-Updates)
 
-This application supports automatic updates via GitHub Releases using `update-electron-app`.
+This application supports automatic updates via GitHub Releases.
 
-#### Prerequisites
+1. **Build** the app for the target platform.
+2. **Sign & Notarize** (Critical for macOS).
+3. **Create Release**:
+   - Tag a new version (e.g., `v1.0.1`).
+   - Upload the artifacts:
+     - **macOS**: `.zip` of the `.app` bundle.
+     - **Windows**: `Row2ReachSetup.exe`, `RELEASES`, and `.nupkg` files.
+4. **Publish**: The app will detect the new version on next launch.
 
-- **macOS**: Applications must be code-signed and notarized for auto-updates to work
-- **Windows**: Code signing is highly recommended (app will work but show warnings without it)
-- **GitHub**: Ensure your repository URL is set correctly in `package.json`
-
-#### Publishing a macOS Release
-
-1. Build the macOS application:
-
-   ```bash
-   npm run buildMac
-   ```
-
-2. **Code sign and notarize** the `.app` bundle (required for auto-updates):
-
-   ```bash
-   # This requires an Apple Developer account and certificate
-   # See: https://www.electron.build/code-signing
-   ```
-
-3. Create a `.zip` of the signed `.app` bundle:
-
-   ```bash
-   cd release-builds/Row_2_Reach-darwin-arm64
-   zip -r Row_2_Reach-darwin-arm64.zip "Row 2 Reach.app"
-   ```
-
-4. Go to your GitHub repository and create a new release:
-   - Click "Releases" → "Draft a new release"
-   - Create a new tag (e.g., `v1.0.0`)
-   - Upload `Row_2_Reach-darwin-arm64.zip`
-   - Publish the release
-
-#### Publishing a Windows Release
-
-1. Build the Windows application:
-
-   ```bash
-   npm run buildWin
-   ```
-
-2. Create the installer:
-
-   ```bash
-   npm run create-installer
-   ```
-
-3. Go to your GitHub repository and create a new release (or add to the existing release):
-   - Upload the following files from `release-builds/installers/`:
-     - `Row2ReachSetup.exe` - The installer executable
-     - `RELEASES` - Metadata file (required for auto-updates)
-     - `Row_2_Reach-<version>-full.nupkg` - Full package file
-   - Publish the release
-
-#### Testing Auto-Updates
-
-1. Install the application from the release
-2. In the application menu, click "Check for Updates..."
-3. Publish a new release with a higher version number
-4. The app should detect and download the update automatically
-
-**Note**: Auto-updates only work in production builds, not in development mode (`npm start`).
-
-## Project Structure
+### Project Structure
 
 ```
 electron-app/
 ├── app.js              # Main Electron process
 ├── preload.js          # Preload script for secure API exposure
 ├── index.html          # Main application page
+├── config.html         # Configuration page
 ├── emails.html         # Email composer page
-├── styles.css          # Application styles
-├── file-input.js       # CSV file handling
-├── buttons.js          # API integration and data enrichment
-├── emails-buttons.js   # Email functionality
-├── data/
-│   ├── config.json     # API configuration (gitignored)
-│   └── config.json.example
+├── src/                # Source code
+│   ├── api/            # API integration logic (Apollo, ZeroBounce)
+│   ├── handlers/       # Event handlers
+│   ├── state/          # State management
+│   └── utils/          # Utility functions
+├── data/               # Local data storage
 └── package.json
 ```
 
-## API Integration
+### API Integration
 
-### Apollo API
+- **Apollo API**: Matches contacts based on name, organization, and LinkedIn URL.
+- **ZeroBounce API**: Validates email addresses and provides deliverability status.
 
-- Endpoint: `https://api.apollo.io/api/v1/people/bulk_match`
-- Matches contacts based on name, organization, and LinkedIn URL
-- Adds "Apollo Email" column to your CSV
+### Security
 
-### ContactOut API
-
-- Endpoint: `https://api.contactout.com/v1/people/linkedin/batch`
-- Finds emails based on LinkedIn profile URLs
-- Adds "ContactOut Email" column to your CSV
-
-## Security
-
-- API keys are stored locally using `electron-json-storage`
-- Keys are never exposed to the renderer process directly
-- All API calls are made through secure context bridge
-
-## Development
-
-### File Structure
-
-- `app.js`: Main Electron application setup
-- `preload.js`: Secure bridge between main and renderer processes
-- `buttons.js`: Handles API calls and data enrichment
-- `emails-buttons.js`: Manages email composition and sending
-- `file-input.js`: CSV file processing and table rendering
-
-### Adding New Features
-
-1. Add UI elements in HTML files
-2. Implement functionality in respective JS files
-3. Use `electronAPI` for secure communication with main process
+- API keys are stored locally using `electron-json-storage`.
+- Keys are never exposed to the renderer process directly.
+- All API calls are made through a secure context bridge.
+- Microsoft Graph authentication uses MSAL for secure token handling.
 
 ## Troubleshooting
 
 ### Common Issues
 
-**"Load a CSV first" error**: Ensure you've uploaded a valid CSV file before trying to enrich data.
-
-**API errors**: Check that your API keys are correctly configured in `data/config.json`.
-
-**No emails found**: Verify your CSV contains the required columns (Name, Organization, LinkedIn).
+- **"Load a CSV first" error**: Ensure you've uploaded a valid CSV file before trying to enrich data.
+- **API errors**: Check that your API keys are correctly configured in the settings.
+- **No emails found**: Verify your CSV contains the required columns (Name, Organization, LinkedIn).
 
 ### Debug Mode
 
