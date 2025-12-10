@@ -313,6 +313,18 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
   }
 });
 
+const seleniumManager = require("./src/utils/selenium-manager");
+
+ipcMain.on(IPC_MESSAGES.USE_SELENIUM, async () => {
+  try {
+    await seleniumManager.launch();
+    console.log("✅ Selenium launched successfully");
+  } catch (error) {
+    console.error("❌ Failed to launch Selenium:", error);
+    dialog.showErrorBox("Selenium Launch Error", error.message);
+  }
+});
+
 // Handle save file dialog
 ipcMain.handle(
   "save-csv-dialog",

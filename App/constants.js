@@ -7,6 +7,7 @@ const IPC_MESSAGES = {
   LOGIN: "LOGIN",
   SENDEMAIL: "send-email",
   SENDMAILNOW: "send-mail-now",
+  USE_SELENIUM: "use-selenium",
 };
 
 module.exports = {

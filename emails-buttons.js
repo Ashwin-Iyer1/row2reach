@@ -159,9 +159,15 @@ document
   });
 
 const signInButton = document.getElementById("signIn");
+const useSeleniumButton = document.getElementById("useSelenium");
+
 // UI event handlers
 signInButton.addEventListener("click", () => {
   window.electronAPI.sendLoginMessage();
+});
+
+useSeleniumButton.addEventListener("click", () => {
+  window.electronAPI.sendMessage("use-selenium");
 });
 
 window.electronAPI.onHideButton((event, message) => {
