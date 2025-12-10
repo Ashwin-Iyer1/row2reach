@@ -4,7 +4,7 @@ const { execSync } = require("child_process");
 const os = require("os");
 const axios = require("axios");
 const AdmZip = require("adm-zip");
-const { Builder, By } = require("selenium-webdriver");
+const { Builder, By, until } = require("selenium-webdriver");
 const chrome = require("selenium-webdriver/chrome");
 const { app } = require("electron");
 
@@ -230,14 +230,44 @@ class SeleniumManager {
 
     const service = new chrome.ServiceBuilder(driverPath);
 
+    // Configure Chrome Options
+    const options = new chrome.Options();
+
+    // Disable popup blocking and automation flags
+    options.addArguments("--disable-popup-blocking");
+    options.excludeSwitches("enable-automation");
+
+    // Persist session with user profile
+    const profilePath = path.join(app.getPath("userData"), "selenium_profile");
+    if (!fs.existsSync(profilePath)) {
+      fs.mkdirSync(profilePath, { recursive: true });
+    }
+    options.addArguments(`user-data-dir=${profilePath}`);
+
     // Launch Browser
     const driver = await new Builder()
       .forBrowser("chrome")
       .setChromeService(service)
+      .setChromeOptions(options)
       .build();
 
-    // Optional: Navigate to a default page or let user take control
-    await driver.get("https://www.google.com"); // Just to prove it works
+    await driver.get("https://outlook.office.com/mail/");
+
+    console.log("Waiting for user to log in and element to appear...");
+
+    await driver.wait(
+      until.elementLocated(By.css(".row.title.ext-title")),
+      300000
+    );
+
+    console.log("Sign in found");
+
+    await driver.wait(
+      until.elementLocated(By.css('[data-testid="banner"]')),
+      300000
+    );
+
+    console.log("Banner found");
 
     return driver;
   }
