@@ -401,11 +401,37 @@ class SeleniumManager {
 
     // 4. Handle Body
     try {
-      const bodyInput = await driver.findElement(
-        By.css('div[aria-label="Message body"]')
-      );
-      await bodyInput.sendKeys(body);
-      console.log("Body set");
+      let bodyTarget;
+      try {
+        // Try to find the "Type /" placeholder as requested by user
+        // This element usually overlays the empty editor
+        bodyTarget = await driver.findElement(
+          By.xpath("//span[contains(text(), 'Type / to insert files')]")
+        );
+        console.log("Found 'Type /' placeholder");
+      } catch (err) {
+        // Fallback to the main contenteditable div if placeholder is missing (e.g. signature present)
+        console.log(
+          "'Type /' placeholder not found, using generic body selector"
+        );
+        bodyTarget = await driver.findElement(
+          By.css('div[aria-label="Message body"]')
+        );
+      }
+
+      await driver
+        .actions()
+        .click(bodyTarget)
+        .pause(500)
+        .keyDown(Key.COMMAND)
+        .sendKeys(Key.UP)
+        .keyUp(Key.COMMAND)
+        .pause(100)
+        .sendKeys(body)
+        .pause(500)
+        .perform();
+
+      console.log("Body set (prepended)");
     } catch (e) {
       console.error("Error setting body:", e);
     }
