@@ -60,11 +60,11 @@ export async function buildZeroBounceFormData(csvContent) {
   // Build new CSV with only the required columns
   const filteredLines = [];
 
-  // Add header
+  // Add header with RowId
   if (linkedinIndex !== -1) {
-    filteredLines.push("Full Name,Domain,Linkedin URL");
+    filteredLines.push("RowId,Full Name,Domain,Linkedin URL");
   } else {
-    filteredLines.push("Full Name,Domain");
+    filteredLines.push("RowId,Full Name,Domain");
   }
 
   // Add data rows
@@ -83,12 +83,13 @@ export async function buildZeroBounceFormData(csvContent) {
       fullName = cols[fullNameIndex] || "";
     }
 
+    // Use the loop index 'i' as the RowId. This corresponds to the original line number in 'lines'.
     if (linkedinIndex !== -1) {
       filteredLines.push(
-        `${fullName},${cols[domainIndex]},${cols[linkedinIndex]}`
+        `${i},${fullName},${cols[domainIndex]},${cols[linkedinIndex]}`
       );
     } else {
-      filteredLines.push(`${fullName},${cols[domainIndex]}`);
+      filteredLines.push(`${i},${fullName},${cols[domainIndex]}`);
     }
   }
 
@@ -103,8 +104,10 @@ export async function buildZeroBounceFormData(csvContent) {
   const formData = new FormData();
   formData.append("file", blob, "enriched_data.csv");
   formData.append("api_key", object.ZEROBOUNCE_KEY);
-  formData.append("domain_column", "2");
-  formData.append("full_name_column", "1");
+
+  // Update column indices because RowId is now column 1
+  formData.append("domain_column", "3"); // Domain is 3rd
+  formData.append("full_name_column", "2"); // Name is 2nd
   formData.append("has_header_row", "true");
 
   return formData;
@@ -125,7 +128,15 @@ export function applyZeroBounceResultsToCsv(originalRows, data) {
     const emailColumnIndex = headerCols.indexOf("ZeroBounce Email");
 
     data.results.forEach((result, index) => {
-      const dataRowIndex = index + 1;
+      // Use RowId if present to map back to the correct row index
+      let dataRowIndex;
+      if (result.RowId) {
+        dataRowIndex = parseInt(result.RowId, 10);
+      } else {
+        // Fallback to sequential index if RowId is missing (legacy/error case)
+        dataRowIndex = index + 1;
+      }
+
       if (dataRowIndex < rows.length) {
         // Try multiple possible email field names from ZeroBounce CSV
         const email =

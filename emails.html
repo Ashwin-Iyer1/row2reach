@@ -31,7 +31,7 @@
           <h1>Emails</h1>
         </div>
       </header>
-            <div id="table-container"></div>
+      <div id="table-container"></div>
 
       <div
         class="emails-container"
@@ -49,10 +49,18 @@
               <textarea id="body"></textarea><br /><br />
             </div>
           </form>
-          <button id="preview-button"type="submit">Preview</button>
+          <button id="preview-button" type="submit">Preview</button>
           <button class="dropdown-item" id="saveAsCsv">Save as CSV</button>
           <button class="dropdown-item" id="signIn">Sign in using Popup</button>
-          <button class="dropdown-item add-northeastern-bcc-button" id="addNortheasternAll">Add Northeastern BCCs to All</button>
+          <button class="dropdown-item" id="useSelenium">
+            Send Using Selenium
+          </button>
+          <button
+            class="dropdown-item add-northeastern-bcc-button"
+            id="addNortheasternAll"
+          >
+            Add Northeastern BCCs to All
+          </button>
           <button class="dropdown-item" id="draftAll">Draft All</button>
           <button class="dropdown-item" id="sendAll">Send All</button>
           <div id="preview-list"></div>
@@ -63,6 +71,67 @@
             <div id="variables-list"></div>
           </div>
         </section>
+      </div>
+      <!-- Selenium Options Modal -->
+      <div id="selenium-options-modal" class="modal" style="display: none">
+        <div class="modal-content card">
+          <div class="modal-header">
+            <h3>Selenium Options</h3>
+            <button
+              id="close-selenium-modal"
+              class="close-button"
+              title="Close"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>Select an action for your email list:</p>
+            <div
+              class="modal-actions"
+              style="
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin-top: 20px;
+              "
+            >
+              <button
+                id="modal-draft-all"
+                class="dropdown-item"
+                style="
+                  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+                  color: white;
+                "
+              >
+                Draft All
+              </button>
+              <button
+                id="modal-send-all"
+                class="dropdown-item"
+                style="
+                  background: linear-gradient(135deg, #10b981, #059669);
+                  color: white;
+                "
+              >
+                Send All
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
     <script src="file-input.js"></script>

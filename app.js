@@ -313,6 +313,61 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
   }
 });
 
+const seleniumManager = require("./src/utils/selenium-manager");
+let seleniumDriver = null;
+
+ipcMain.on(IPC_MESSAGES.USE_SELENIUM, async () => {
+  // We no longer launch here, waiting for specific action (Draft or Send)
+  console.log("ℹ️ Selenium mode enabled. Driver will launch on first action.");
+});
+
+async function ensureSeleniumDriver() {
+  if (!seleniumDriver) {
+    console.log("🚀 Launching Selenium Driver...");
+    seleniumDriver = await seleniumManager.launch();
+    console.log("✅ Selenium launched successfully");
+  }
+  return seleniumDriver;
+}
+
+ipcMain.on(IPC_MESSAGES.SELENIUM_SEND_MULTIPLE, async (event, emailList) => {
+  try {
+    await ensureSeleniumDriver();
+    console.log(`Sending ${emailList.length} emails via Selenium...`);
+    await seleniumManager.sendMultipleEmails(seleniumDriver, emailList, true);
+    console.log("✅ All emails sent successfully via Selenium");
+    event.reply("selenium-send-complete", {
+      success: true,
+      count: emailList.length,
+    });
+  } catch (error) {
+    console.error("❌ Failed to send emails via Selenium:", error);
+    event.reply("selenium-send-complete", {
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+ipcMain.on(IPC_MESSAGES.SELENIUM_DRAFT_MULTIPLE, async (event, emailList) => {
+  try {
+    await ensureSeleniumDriver();
+    console.log(`Creating ${emailList.length} email drafts via Selenium...`);
+    await seleniumManager.sendMultipleEmails(seleniumDriver, emailList, false);
+    console.log("✅ All email drafts created successfully via Selenium");
+    event.reply("selenium-draft-complete", {
+      success: true,
+      count: emailList.length,
+    });
+  } catch (error) {
+    console.error("❌ Failed to create drafts via Selenium:", error);
+    event.reply("selenium-draft-complete", {
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // Handle save file dialog
 ipcMain.handle(
   "save-csv-dialog",
