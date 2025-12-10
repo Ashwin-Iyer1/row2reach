@@ -293,19 +293,16 @@ class SeleniumManager {
       console.log("Auto-login skipped or failed:", e.message);
     }
 
-    console.log("Waiting for 'New mail' button to confirm login success...");
-
+    // Wait for 'New mail' button to ensure we are logged in
     try {
-      await this.createEmail(
-        driver,
-        "test@example.com",
-        "randombcc@example.com",
-        "Test Subject",
-        "This is a test email"
+      await driver.wait(
+        until.elementLocated(By.css('button[aria-label="New mail"]')),
+        60000
       );
+      console.log("Login successful: 'New mail' button found.");
     } catch (e) {
       console.log(
-        "Timed out waiting for 'New mail' button. User might need to intervene."
+        "Timed out waiting for 'New mail' button. User might need to login manually."
       );
     }
 
@@ -465,24 +462,28 @@ class SeleniumManager {
 
   async sendMultipleEmails(driver, emailList, sendNow = false) {
     console.log(`Processing ${emailList.length} emails...`);
-    
+
     for (let i = 0; i < emailList.length; i++) {
       const { recipient, bcc, subject, body } = emailList[i];
-      console.log(`Processing email ${i + 1}/${emailList.length} to ${recipient}`);
-      
+      console.log(
+        `Processing email ${i + 1}/${emailList.length} to ${recipient}`
+      );
+
       try {
         await this.createEmail(driver, recipient, bcc, subject, body, sendNow);
-        console.log(`Email ${i + 1} ${sendNow ? 'sent' : 'drafted'} successfully`);
+        console.log(
+          `Email ${i + 1} ${sendNow ? "sent" : "drafted"} successfully`
+        );
       } catch (error) {
         console.error(`Error processing email ${i + 1}:`, error);
       }
-      
+
       // Small delay between emails to avoid rate limiting
       if (i < emailList.length - 1) {
         await driver.sleep(1000);
       }
     }
-    
+
     console.log(`Completed processing ${emailList.length} emails`);
   }
 }

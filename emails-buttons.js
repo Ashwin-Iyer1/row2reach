@@ -173,6 +173,60 @@ useSeleniumButton.addEventListener("click", () => {
   useSelenium = true;
   useSeleniumButton.textContent = "Selenium Active";
   useSeleniumButton.disabled = true;
+
+  // Hide Sign In button
+  signInButton.style.display = "none";
+
+  // Show the Selenium Options Modal
+  const modal = document.getElementById("selenium-options-modal");
+  if (modal) {
+    modal.style.display = "flex";
+  }
+});
+
+// Modal close handler
+document
+  .getElementById("close-selenium-modal")
+  .addEventListener("click", () => {
+    document.getElementById("selenium-options-modal").style.display = "none";
+  });
+
+// Modal Draft All handler
+document.getElementById("modal-draft-all").addEventListener("click", () => {
+  const textInput = document.getElementById("body").value;
+  const subjectInput = document.getElementById("subject").value;
+
+  if (!textInput || !subjectInput) {
+    alert("Please enter both subject and message before creating drafts.");
+    return;
+  }
+
+  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+    alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  handleSeleniumDraftAll(textInput, subjectInput);
+  document.getElementById("selenium-options-modal").style.display = "none";
+});
+
+// Modal Send All handler
+document.getElementById("modal-send-all").addEventListener("click", () => {
+  const textInput = document.getElementById("body").value;
+  const subjectInput = document.getElementById("subject").value;
+
+  if (!textInput || !subjectInput) {
+    alert("Please enter both subject and message before sending emails.");
+    return;
+  }
+
+  if (!enrichedCsvData || enrichedCsvData.length <= 1) {
+    alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  handleSeleniumSendAll(textInput, subjectInput);
+  document.getElementById("selenium-options-modal").style.display = "none";
 });
 
 window.electronAPI.onHideButton((event, message) => {
@@ -996,6 +1050,126 @@ document
       preview_list.appendChild(message);
     }
   });
+
+/**
+ * Prepare a list of email objects from the CSV data to send/draft via Selenium.
+ */
+function prepareSeleniumEmailList(textInput, subjectInput) {
+  const headers = enrichedCsvData[0].split(",").map((h) => h.trim());
+  const emailList = [];
+
+  // Find the Domain column index
+  const domainIdx = headers.findIndex((h) => h.toLowerCase() === "domain");
+  const emailHeaderIndexes = headers
+    .map((h, idx) => (h.toLowerCase().includes("email") ? idx : -1))
+    .filter((idx) => idx !== -1);
+
+  // Process each data row (skip header at index 0)
+  for (let i = 1; i < enrichedCsvData.length; i++) {
+    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+
+    let formattedText = textInput;
+    let formattedSubject = subjectInput;
+
+    // Replace each variable with corresponding data for this row
+    headers.forEach((header, index) => {
+      const variable = `{${header}}`;
+      const value = dataRow[index] || "";
+      formattedText = formattedText.replace(
+        new RegExp(escapeRegExp(variable), "g"),
+        value
+      );
+      formattedSubject = formattedSubject.replace(
+        new RegExp(escapeRegExp(variable), "g"),
+        value
+      );
+    });
+
+    const isNortheasternDomain =
+      domainIdx !== -1 &&
+      (dataRow[domainIdx] || "").trim().toLowerCase() === "northeastern.edu";
+
+    let recipient = "";
+
+    // If Northeastern domain, use [last].[first_initial]@northeastern.edu as primary recipient
+    if (isNortheasternDomain) {
+      const firstNameIdx = headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("first") && h.toLowerCase().includes("name")
+      );
+      const lastNameIdx = headers.findIndex(
+        (h) =>
+          h.toLowerCase().includes("last") && h.toLowerCase().includes("name")
+      );
+
+      if (firstNameIdx !== -1 && lastNameIdx !== -1) {
+        const firstName = (dataRow[firstNameIdx] || "").trim();
+        const lastName = (dataRow[lastNameIdx] || "").trim();
+
+        if (firstName && lastName) {
+          const first = firstName.toLowerCase();
+          const last = lastName.toLowerCase();
+          recipient = `${last}.${first.charAt(0)}@northeastern.edu`;
+        }
+      }
+    }
+
+    // Collect all available email addresses
+    const availableEmails = [];
+    if (isNortheasternDomain && recipient) {
+      availableEmails.push(recipient);
+    }
+    emailHeaderIndexes.forEach((idx) => {
+      const email = (dataRow[idx] || "").trim().toLowerCase();
+      if (email && !availableEmails.includes(email)) {
+        availableEmails.push(email);
+      }
+    });
+    if (northeasternBccsByRow[i]) {
+      northeasternBccsByRow[i].forEach((email) => {
+        const lowerEmail = email.toLowerCase();
+        if (!availableEmails.includes(lowerEmail)) {
+          availableEmails.push(lowerEmail);
+        }
+      });
+    }
+
+    const uniqueEmails = [...new Set(availableEmails)];
+    if (!recipient) {
+      recipient = uniqueEmails[0] || "";
+    }
+
+    if (recipient) {
+      emailList.push({
+        recipient: recipient,
+        bcc: uniqueEmails.filter((email) => email !== recipient),
+        subject: formattedSubject,
+        body: formattedText,
+      });
+    }
+  }
+  return emailList;
+}
+
+function handleSeleniumDraftAll(textInput, subjectInput) {
+  const emailList = prepareSeleniumEmailList(textInput, subjectInput);
+  if (emailList.length === 0) {
+    alert("No valid recipients found to draft.");
+    return;
+  }
+  window.electronAPI.sendMessage("selenium-draft-multiple", emailList);
+  alert(`Started processing ${emailList.length} drafts via Selenium...`);
+}
+
+function handleSeleniumSendAll(textInput, subjectInput) {
+  const emailList = prepareSeleniumEmailList(textInput, subjectInput);
+  if (emailList.length === 0) {
+    alert("No valid recipients found to send.");
+    return;
+  }
+  window.electronAPI.sendMessage("selenium-send-multiple", emailList);
+  alert(`Started processing ${emailList.length} emails via Selenium...`);
+}
 
 // Helper function to escape special regex characters
 function escapeRegExp(string) {

@@ -1091,3 +1091,15 @@ span[id$="-data"]:not(:empty) {
   width: 20px;
   height: 20px;
 }
+
+/* Selenium Options Modal Specifics */
+#selenium-options-modal .modal-content {
+  max-width: 400px;
+  text-align: center;
+}
+
+#selenium-options-modal .modal-actions button {
+  min-width: 120px;
+  padding: 10px 15px;
+  font-size: 14px;
+}
