@@ -229,6 +229,8 @@ class SeleniumManager {
     console.log(`Driver Path: ${driverPath}`);
 
     const service = new chrome.ServiceBuilder(driverPath);
+    service.enableVerboseLogging();
+    service.setStdio("inherit");
 
     // Configure Chrome Options
     const options = new chrome.Options();
