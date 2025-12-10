@@ -253,21 +253,59 @@ class SeleniumManager {
 
     await driver.get("https://outlook.office.com/mail/");
 
-    console.log("Waiting for user to log in and element to appear...");
+    try {
+      // Check for username field
+      const usernameBox = await driver
+        .wait(
+          until.elementLocated(By.css(".input.text-box")),
+          5000 // Short timeout: if we are already logged in, this will timeout quickly and we'll proceed
+        )
+        .catch(() => null);
 
-    await driver.wait(
-      until.elementLocated(By.css(".row.title.ext-title")),
-      300000
-    );
+      if (usernameBox) {
+        console.log("Found login page, attempting auto-login...");
 
-    console.log("Sign in found");
+        await driver
+          .wait(until.elementLocated(By.css(".input.text-box")), 30000)
+          .catch(() => null);
 
-    await driver.wait(
-      until.elementLocated(By.css('[data-testid="banner"]')),
-      300000
-    );
+        // look for any text on the screen says Enter password or Enter your password
+        // dont look for inputs
 
-    console.log("Banner found");
+        console.log("user has entered email");
+
+        // Wait for password screen by checking for the heading text "Enter password" or "Enter your password"
+        // Matching both div with role=heading and h1 tags
+        await driver.wait(
+          until.elementLocated(
+            By.xpath(
+              "//*[(@role='heading' or local-name()='h1') and (contains(text(), 'Enter password') or contains(text(), 'Enter your password'))]"
+            )
+          ),
+          30000
+        );
+
+        console.log("Password screen detected");
+      } else {
+        console.log("Already logged in or login page skipped.");
+      }
+    } catch (e) {
+      console.log("Auto-login skipped or failed:", e.message);
+    }
+
+    console.log("Waiting for 'New mail' button to confirm login success...");
+
+    try {
+      await driver.wait(
+        until.elementLocated(By.css('button[aria-label="New mail"]')),
+        60000
+      );
+      console.log("Login successful: 'New mail' button found.");
+    } catch (e) {
+      console.log(
+        "Timed out waiting for 'New mail' button. User might need to intervene."
+      );
+    }
 
     return driver;
   }
