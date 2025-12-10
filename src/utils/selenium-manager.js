@@ -4,7 +4,7 @@ const { execSync } = require("child_process");
 const os = require("os");
 const axios = require("axios");
 const AdmZip = require("adm-zip");
-const { Builder, By, until } = require("selenium-webdriver");
+const { Builder, By, until, Key } = require("selenium-webdriver");
 const chrome = require("selenium-webdriver/chrome");
 const { app } = require("electron");
 
@@ -296,11 +296,13 @@ class SeleniumManager {
     console.log("Waiting for 'New mail' button to confirm login success...");
 
     try {
-      await driver.wait(
-        until.elementLocated(By.css('button[aria-label="New mail"]')),
-        60000
+      await this.createEmail(
+        driver,
+        "test@example.com",
+        "randombcc@example.com",
+        "Test Subject",
+        "This is a test email"
       );
-      console.log("Login successful: 'New mail' button found.");
     } catch (e) {
       console.log(
         "Timed out waiting for 'New mail' button. User might need to intervene."
@@ -308,6 +310,105 @@ class SeleniumManager {
     }
 
     return driver;
+  }
+
+  async createEmail(driver, recipient, bcc, subject, body) {
+    const newMailButton = await driver.wait(
+      until.elementLocated(By.css('button[aria-label="New mail"]')),
+      60000
+    );
+    console.log("Login successful: 'New mail' button found.");
+
+    await newMailButton.click();
+    console.log("New mail button clicked");
+
+    // Wait for the compose form to animate in
+    await driver.sleep(1000);
+
+    // 1. Handle Recipient (To)
+    try {
+      // Outlook uses a contenteditable div for the "To" field, not a simple input.
+      // Selector based on user snippet: div[contenteditable="true"][aria-label="To"]
+      const toInput = await driver.wait(
+        until.elementLocated(
+          By.css('div[contenteditable="true"][aria-label="To"]')
+        ),
+        10000
+      );
+
+      await driver.wait(until.elementIsVisible(toInput), 5000);
+
+      await driver
+        .actions()
+        .click(toInput)
+        .pause(500)
+        .sendKeys(recipient)
+        .pause(500)
+        .sendKeys(Key.RETURN)
+        .perform();
+
+      console.log(`Recipient '${recipient}' added`);
+    } catch (e) {
+      console.error("Error setting recipient:", e);
+    }
+
+    // 2. Handle BCC
+    if (bcc) {
+      try {
+        // Click Bcc button to reveal field
+        const bccButton = await driver.findElement(
+          By.xpath("//button[text()='Bcc']")
+        );
+        await bccButton.click();
+        console.log("Clicked Bcc button");
+
+        // Wait for Bcc input to appear
+        // Selector based on user snippet: div[contenteditable="true"][aria-label="Bcc"]
+        const bccInput = await driver.wait(
+          until.elementLocated(
+            By.css('div[contenteditable="true"][aria-label="Bcc"]')
+          ),
+          5000
+        );
+
+        await driver.wait(until.elementIsVisible(bccInput), 5000);
+
+        await driver
+          .actions()
+          .click(bccInput)
+          .pause(500)
+          .sendKeys(bcc)
+          .pause(500)
+          .sendKeys(Key.RETURN)
+          .perform();
+
+        console.log(`BCC '${bcc}' added`);
+      } catch (e) {
+        console.error("Error setting BCC:", e);
+      }
+    }
+
+    // 3. Handle Subject
+    try {
+      const subjectInput = await driver.findElement(
+        By.css('input[aria-label="Subject"]')
+      );
+      await subjectInput.sendKeys(subject);
+      console.log("Subject set");
+    } catch (e) {
+      console.error("Error setting subject:", e);
+    }
+
+    // 4. Handle Body
+    try {
+      const bodyInput = await driver.findElement(
+        By.css('div[aria-label="Message body"]')
+      );
+      await bodyInput.sendKeys(body);
+      console.log("Body set");
+    } catch (e) {
+      console.error("Error setting body:", e);
+    }
   }
 }
 
