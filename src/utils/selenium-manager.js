@@ -20,18 +20,62 @@ class SeleniumManager {
    * Get the locally installed Chrome version on macOS
    */
   getChromeVersion() {
-    try {
-      // macOS default path
-      const command =
-        '"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --version';
-      const output = execSync(command).toString().trim();
-      // Output format: "Google Chrome 120.0.6099.109"
-      const versionMatch = output.match(/Google Chrome (\d+\.\d+\.\d+\.\d+)/);
-      if (versionMatch && versionMatch[1]) {
-        return versionMatch[1];
+    if (process.platform === "darwin") {
+      try {
+        // macOS default path
+        const command =
+          '"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --version';
+        const output = execSync(command).toString().trim();
+        // Output format: "Google Chrome 120.0.6099.109"
+        const versionMatch = output.match(/Google Chrome (\d+\.\d+\.\d+\.\d+)/);
+        if (versionMatch && versionMatch[1]) {
+          return versionMatch[1];
+        }
+      } catch (error) {
+        console.error("Error getting Chrome version on macOS:", error);
       }
-    } catch (error) {
-      console.error("Error getting Chrome version:", error);
+    } else if (process.platform === "win32") {
+      try {
+        // Windows: Try registry or default paths
+        // Ideally use reg query, but simple path check is often enough for standard installs
+        // Method 1: Reg query
+        try {
+          const command =
+            'reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version';
+          const output = execSync(command).toString();
+          const match = output.match(/version\s+REG_SZ\s+([\d.]+)/);
+          if (match && match[1]) return match[1];
+        } catch (e) {
+          // ignore
+        }
+
+        // Method 2: Check standard paths with WMIC or similar, or just try to run it?
+        // Let's try to run wmic to get version from executable
+        const possiblePaths = [
+          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+          "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+          path.join(
+            os.homedir(),
+            "AppData\\Local\\Google\\Chrome\\Application\\chrome.exe"
+          ),
+        ];
+
+        for (const exePath of possiblePaths) {
+          if (fs.existsSync(exePath)) {
+            // Use wmic to get version
+            const cmd = `wmic datafile where name="${exePath.replace(
+              /\\/g,
+              "\\\\"
+            )}" get Version /value`;
+            const output = execSync(cmd).toString();
+            // Output: Version=120.0.6099.109
+            const match = output.match(/Version=([\d.]+)/);
+            if (match && match[1]) return match[1];
+          }
+        }
+      } catch (error) {
+        console.error("Error getting Chrome version on Windows:", error);
+      }
     }
     return null;
   }
@@ -46,10 +90,20 @@ class SeleniumManager {
     if (majorVersion >= 115) {
       try {
         // Determine platform string for CfT
-        const platform = "mac-arm64"; // Assuming user is on Apple Silicon based on package.json "arch=arm64". If could be x64, need detection.
-        // Let's detect arch roughly
-        const isArm = process.arch === "arm64";
-        const cftPlatform = isArm ? "mac-arm64" : "mac-x64";
+        // Detect OS and Arch
+        let cftPlatform = "";
+        if (process.platform === "darwin") {
+          const isArm = process.arch === "arm64";
+          cftPlatform = isArm ? "mac-arm64" : "mac-x64";
+        } else if (process.platform === "win32") {
+          // Chrome for Testing generally has win32 and win64
+          // If we are on x64 node, likely valid to use win64, but typically win32 binary works on both?
+          // Actually win64 is preferred if available.
+          cftPlatform = process.arch === "x64" ? "win64" : "win32";
+        } else {
+          // Fallback or linux
+          cftPlatform = "linux64"; // Naive fallback
+        }
 
         console.log(
           `Checking CfT endpoints for Chrome ${chromeVersion} on ${cftPlatform}...`
@@ -95,20 +149,23 @@ class SeleniumManager {
 
       // Construct download URL
       // macOS legacy zip name
-      const isArm = process.arch === "arm64";
-      // Note: Legacy chromedriver didn't always have m1 specific builds for older versions, usually just mac64.
-      // But for recent pre-115, mac64_m1 existed. Simpler to try mac64 as general fallback?
-      // Actually, Google provided chromedriver_mac64.zip for Intel and chromedriver_mac64_m1.zip for Apple Silicon.
-      // Let's try to match exactly if possible, or fallback.
-
-      let zipName = "chromedriver_mac64.zip";
-      if (isArm) {
-        // Check if we should try m1 specific.
-        // Getting exact URL is tricky without checking 404.
-        // We'll stick to mac64 for safety unless we code specific checks.
-        // Actually, let's assume standard mac64 works via Rosetta if needed, or try to be smart.
-        // For this implementation, let's stick to standard names.
-        // However, for recent versions, it's safer.
+      let zipName = "";
+      if (process.platform === "darwin") {
+        zipName =
+          process.arch === "arm64"
+            ? "chromedriver_mac64_m1.zip"
+            : "chromedriver_mac64.zip";
+        // Fallback logic for older versions if m1 specific doesn't exist?
+        // For simplicity, let's keep it somewhat dynamic or default to mac64 if simple
+        // But the user's code had "chromedriver_mac64.zip" hardcoded before with a TODO.
+        // Let's rely on standard mac64 which works via Rosetta usually, or improved logic.
+        // Actually, let's stick to the previous hardcoded 'chromedriver_mac64.zip' if we want to be safe for legacy,
+        // but strictly speaking 'chromedriver_mac64_m1.zip' is better for M1.
+        // If the user's previous code worked, it was using 'chromedriver_mac64.zip' implicitly in the fallback block?
+        // Wait, line 104 was `let zipName = "chromedriver_mac64.zip";`
+        zipName = "chromedriver_mac64.zip";
+      } else if (process.platform === "win32") {
+        zipName = "chromedriver_win32.zip"; // Legacy usually only had win32
       }
 
       return {
@@ -179,8 +236,13 @@ class SeleniumManager {
     // Recursive search for 'chromedriver' file
     const files = fs.readdirSync(dir, { recursive: true });
     for (const file of files) {
-      // Strictly match the binary name to avoid matching LICENSE.chromedriver or THIRD_PARTY_NOTICES.chromedriver
-      if (file === "chromedriver" || file === "chromedriver.exe") {
+      // Strictly match the binary name
+      if (
+        file === "chromedriver" ||
+        file === "chromedriver.exe" ||
+        file.endsWith(path.sep + "chromedriver") ||
+        file.endsWith(path.sep + "chromedriver.exe")
+      ) {
         return path.join(dir, file);
       }
     }
@@ -425,9 +487,9 @@ class SeleniumManager {
         .actions()
         .click(bodyTarget)
         .pause(500)
-        .keyDown(Key.COMMAND)
+        .keyDown(process.platform === "win32" ? Key.CONTROL : Key.COMMAND)
         .sendKeys(Key.UP)
-        .keyUp(Key.COMMAND)
+        .keyUp(process.platform === "win32" ? Key.CONTROL : Key.COMMAND)
         .pause(100)
         .sendKeys(body)
         .pause(500)
