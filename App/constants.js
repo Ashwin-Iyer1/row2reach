@@ -8,6 +8,8 @@ const IPC_MESSAGES = {
   SENDEMAIL: "send-email",
   SENDMAILNOW: "send-mail-now",
   USE_SELENIUM: "use-selenium",
+  SELENIUM_SEND_MULTIPLE: "selenium-send-multiple",
+  SELENIUM_DRAFT_MULTIPLE: "selenium-draft-multiple",
 };
 
 module.exports = {

@@ -312,7 +312,7 @@ class SeleniumManager {
     return driver;
   }
 
-  async createEmail(driver, recipient, bcc, subject, body) {
+  async createEmail(driver, recipient, bcc, subject, body, sendNow = false) {
     const newMailButton = await driver.wait(
       until.elementLocated(By.css('button[aria-label="New mail"]')),
       60000
@@ -353,7 +353,7 @@ class SeleniumManager {
     }
 
     // 2. Handle BCC
-    if (bcc) {
+    if (bcc && bcc.length > 0) {
       try {
         // Click Bcc button to reveal field
         const bccButton = await driver.findElement(
@@ -373,16 +373,19 @@ class SeleniumManager {
 
         await driver.wait(until.elementIsVisible(bccInput), 5000);
 
-        await driver
-          .actions()
-          .click(bccInput)
-          .pause(500)
-          .sendKeys(bcc)
-          .pause(500)
-          .sendKeys(Key.RETURN)
-          .perform();
-
-        console.log(`BCC '${bcc}' added`);
+        // Handle BCC as array or string
+        const bccList = Array.isArray(bcc) ? bcc : [bcc];
+        for (const bccEmail of bccList) {
+          await driver
+            .actions()
+            .click(bccInput)
+            .pause(300)
+            .sendKeys(bccEmail)
+            .pause(300)
+            .sendKeys(Key.RETURN)
+            .perform();
+          console.log(`BCC '${bccEmail}' added`);
+        }
       } catch (e) {
         console.error("Error setting BCC:", e);
       }
@@ -435,6 +438,52 @@ class SeleniumManager {
     } catch (e) {
       console.error("Error setting body:", e);
     }
+
+    // 5. Send or Save Draft
+    try {
+      if (sendNow) {
+        // Find and click the Send button
+        const sendButton = await driver.findElement(
+          By.css('button[aria-label="Send"]')
+        );
+        await sendButton.click();
+        console.log("Email sent");
+        await driver.sleep(2000); // Wait for send to complete
+      } else {
+        // Close the compose window to save as draft
+        const closeButton = await driver.findElement(
+          By.css('button[aria-label="Close"]')
+        );
+        await closeButton.click();
+        console.log("Draft saved");
+        await driver.sleep(1000);
+      }
+    } catch (e) {
+      console.error("Error sending/saving email:", e);
+    }
+  }
+
+  async sendMultipleEmails(driver, emailList, sendNow = false) {
+    console.log(`Processing ${emailList.length} emails...`);
+    
+    for (let i = 0; i < emailList.length; i++) {
+      const { recipient, bcc, subject, body } = emailList[i];
+      console.log(`Processing email ${i + 1}/${emailList.length} to ${recipient}`);
+      
+      try {
+        await this.createEmail(driver, recipient, bcc, subject, body, sendNow);
+        console.log(`Email ${i + 1} ${sendNow ? 'sent' : 'drafted'} successfully`);
+      } catch (error) {
+        console.error(`Error processing email ${i + 1}:`, error);
+      }
+      
+      // Small delay between emails to avoid rate limiting
+      if (i < emailList.length - 1) {
+        await driver.sleep(1000);
+      }
+    }
+    
+    console.log(`Completed processing ${emailList.length} emails`);
   }
 }
 

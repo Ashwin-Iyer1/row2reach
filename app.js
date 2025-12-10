@@ -314,14 +314,45 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
 });
 
 const seleniumManager = require("./src/utils/selenium-manager");
+let seleniumDriver = null;
 
 ipcMain.on(IPC_MESSAGES.USE_SELENIUM, async () => {
   try {
-    await seleniumManager.launch();
+    seleniumDriver = await seleniumManager.launch();
     console.log("✅ Selenium launched successfully");
   } catch (error) {
     console.error("❌ Failed to launch Selenium:", error);
     dialog.showErrorBox("Selenium Launch Error", error.message);
+  }
+});
+
+ipcMain.on(IPC_MESSAGES.SELENIUM_SEND_MULTIPLE, async (event, emailList) => {
+  try {
+    if (!seleniumDriver) {
+      throw new Error("Selenium not initialized. Please click 'Use Selenium' first.");
+    }
+    console.log(`Sending ${emailList.length} emails via Selenium...`);
+    await seleniumManager.sendMultipleEmails(seleniumDriver, emailList, true);
+    console.log("✅ All emails sent successfully via Selenium");
+    event.reply("selenium-send-complete", { success: true, count: emailList.length });
+  } catch (error) {
+    console.error("❌ Failed to send emails via Selenium:", error);
+    event.reply("selenium-send-complete", { success: false, error: error.message });
+  }
+});
+
+ipcMain.on(IPC_MESSAGES.SELENIUM_DRAFT_MULTIPLE, async (event, emailList) => {
+  try {
+    if (!seleniumDriver) {
+      throw new Error("Selenium not initialized. Please click 'Use Selenium' first.");
+    }
+    console.log(`Creating ${emailList.length} email drafts via Selenium...`);
+    await seleniumManager.sendMultipleEmails(seleniumDriver, emailList, false);
+    console.log("✅ All email drafts created successfully via Selenium");
+    event.reply("selenium-draft-complete", { success: true, count: emailList.length });
+  } catch (error) {
+    console.error("❌ Failed to create drafts via Selenium:", error);
+    event.reply("selenium-draft-complete", { success: false, error: error.message });
   }
 });
 

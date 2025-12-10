@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.send(channel, data);
   },
   onHideButton: (callback) => ipcRenderer.on("hide-button-message", callback),
+  onSeleniumSendComplete: (callback) => ipcRenderer.on("selenium-send-complete", (event, data) => callback(data)),
+  onSeleniumDraftComplete: (callback) => ipcRenderer.on("selenium-draft-complete", (event, data) => callback(data)),
 
   saveCsvFile: (csvContent, defaultFileName) =>
     ipcRenderer.invoke("save-csv-dialog", { csvContent, defaultFileName }),

@@ -1,6 +1,8 @@
 let variables = [];
 // Store preview data for each row (for CSV export)
 let previewData = {};
+// Track if Selenium is being used
+let useSelenium = false;
 
 /**
  * Generate Northeastern.edu email variations based on first and last name
@@ -168,6 +170,9 @@ signInButton.addEventListener("click", () => {
 
 useSeleniumButton.addEventListener("click", () => {
   window.electronAPI.sendMessage("use-selenium");
+  useSelenium = true;
+  useSeleniumButton.textContent = "Selenium Active";
+  useSeleniumButton.disabled = true;
 });
 
 window.electronAPI.onHideButton((event, message) => {
@@ -205,6 +210,12 @@ document.getElementById("draftAll").addEventListener("click", function () {
 
   if (!enrichedCsvData || enrichedCsvData.length <= 1) {
     alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  // Check if using Selenium
+  if (useSelenium) {
+    handleSeleniumDraftAll(textInput, subjectInput);
     return;
   }
 
@@ -401,6 +412,12 @@ document.getElementById("sendAll").addEventListener("click", function () {
 
   if (!enrichedCsvData || enrichedCsvData.length <= 1) {
     alert("No CSV data available. Please load data first.");
+    return;
+  }
+
+  // Check if using Selenium
+  if (useSelenium) {
+    handleSeleniumSendAll(textInput, subjectInput);
     return;
   }
 
