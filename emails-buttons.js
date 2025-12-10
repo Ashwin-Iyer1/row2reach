@@ -169,10 +169,13 @@ signInButton.addEventListener("click", () => {
 });
 
 useSeleniumButton.addEventListener("click", () => {
-  window.electronAPI.sendMessage("use-selenium");
-  useSelenium = true;
-  useSeleniumButton.textContent = "Selenium Active";
-  useSeleniumButton.disabled = true;
+  if (!useSelenium) {
+    window.electronAPI.sendMessage("use-selenium");
+    useSelenium = true;
+    useSeleniumButton.textContent = "Selenium Active";
+  }
+  // Do NOT disable the button, so user can click again to reopen modal
+  // useSeleniumButton.disabled = true;
 
   // Hide Sign In button
   signInButton.style.display = "none";
