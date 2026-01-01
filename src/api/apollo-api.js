@@ -35,6 +35,25 @@ export function getApolloDetailsFromCsvRows(rows) {
   let organizationIndex = findColumnIndex(headers, "organization");
   if (organizationIndex < 0) {
     organizationIndex = findColumnIndex(headers, "company");
+  } else {
+    // find ALL columns with "organization" in the header
+    const matchingHeaders = headers.filter((header) =>
+      header.toLowerCase().includes("organization")
+    );
+
+    // if we find more than one, use the organization with the word "previous" in it, else use the first one
+    if (matchingHeaders.length > 0) {
+      let chosenHeader = matchingHeaders[0];
+      if (matchingHeaders.length > 1) {
+        const previousOrg = matchingHeaders.find((header) =>
+          header.toLowerCase().includes("previous")
+        );
+        if (previousOrg) {
+          chosenHeader = previousOrg;
+        }
+      }
+      organizationIndex = headers.indexOf(chosenHeader);
+    }
   }
   const linkedinIndex = findColumnIndex(headers, "linkedin");
   const domainIndex = findColumnIndex(headers, "domain");
@@ -115,16 +134,25 @@ export async function buildApolloRequest(details) {
 export function applyApolloMatchesToCsv(originalRows, matchesList) {
   let rows = [...originalRows];
   rows = ensureHeader(rows, "Apollo Email");
+  rows = ensureHeader(rows, "Apollo LinkedIn");
 
   matchesList.forEach((match, index) => {
     const dataRowIndex = index + 1;
     if (dataRowIndex < rows.length) {
       const email = match && match.email ? match.email : "";
+      const userLinkedin =
+        match && match.linkedin_url ? match.linkedin_url : "";
       rows[dataRowIndex] = setEmailInRow(
         rows[0],
         rows[dataRowIndex],
         email,
         "Apollo Email"
+      );
+      rows[dataRowIndex] = setEmailInRow(
+        rows[0],
+        rows[dataRowIndex],
+        userLinkedin,
+        "Apollo LinkedIn"
       );
     }
   });
@@ -146,16 +174,25 @@ export function applyApolloMatchesToCsvChunk(
 ) {
   let rows = [...originalRows];
   rows = ensureHeader(rows, "Apollo Email");
+  rows = ensureHeader(rows, "Apollo LinkedIn");
 
   matchesList.forEach((match, idx) => {
     const dataRowIndex = startDataRowIndex + idx;
     if (dataRowIndex < rows.length) {
       const email = match && match.email ? match.email : "";
+      const userLinkedin =
+        match && match.linkedin_url ? match.linkedin_url : "";
       rows[dataRowIndex] = setEmailInRow(
         rows[0],
         rows[dataRowIndex],
         email,
         "Apollo Email"
+      );
+      rows[dataRowIndex] = setEmailInRow(
+        rows[0],
+        rows[dataRowIndex],
+        userLinkedin,
+        "Apollo LinkedIn"
       );
     }
   });
