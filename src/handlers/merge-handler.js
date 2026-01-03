@@ -51,93 +51,127 @@ function mergeEmailsFromCsv(secondaryCsv, filename) {
     const pLastNameIdx = primaryHeaders.indexOf('last name');
     const pFullNameIdx = primaryHeaders.indexOf('full name');
     
-    // Create new column header based on filename
-    const cleanFileName = filename ? filename.replace(/\.csv$/i, '') : 'Imported';
-    const newHeaderName = `${cleanFileName} Email`;
-    
-    // Append new header
-    currentRows[0] += `,${newHeaderName}`;
-    const pTargetColIdx = primaryHeaders.length; // New index is at the end (current length)
+    const pTargetColIdx = primaryHeaders.length; // Start adding new columns here
 
     const sFirstNameIdx = secondaryHeaders.indexOf('first name');
     const sLastNameIdx = secondaryHeaders.indexOf('last name');
     const sFullNameIdx = secondaryHeaders.indexOf('full name');
-    const sEmailIdx = secondaryHeaders.findIndex(h => h.includes('email'));
+    
+    // Find ALL email columns in secondary CSV
+    const sEmailIndices = secondaryHeaders
+        .map((h, i) => h.includes('email') ? i : -1)
+        .filter(i => i !== -1);
 
-    if (sEmailIdx === -1) {
-        alert("Secondary CSV must have an 'Email' column.");
+    if (sEmailIndices.length === 0) {
+        alert("Secondary CSV must have at least one 'Email' column.");
         return;
     }
 
+    // specific lookup map: Key -> Array of unique emails
     const emailLookup = new Map();
+    let maxEmailsFound = 0;
 
     for (let i = 1; i < secondaryRows.length; i++) {
         const row = parseRowColumns(secondaryRows[i]);
         if (!row) continue;
-        const email = row[sEmailIdx]?.trim();
-        if (!email) continue;
+        
+        // Collect emails from all email columns
+        const emailSet = new Set();
+        sEmailIndices.forEach(idx => {
+            const val = row[idx]?.trim();
+            if (val) {
+                // Split by comma or semicolon
+                val.split(/[;,]/).forEach(e => {
+                    const clean = e.trim();
+                    if (clean) emailSet.add(clean);
+                });
+            }
+        });
+        
+        const emails = Array.from(emailSet);
+        if (emails.length === 0) continue;
+
+        if (emails.length > maxEmailsFound) {
+            maxEmailsFound = emails.length;
+        }
 
         if (sFirstNameIdx !== -1 && sLastNameIdx !== -1) {
             const first = row[sFirstNameIdx]?.trim().toLowerCase() || "";
             const last = row[sLastNameIdx]?.trim().toLowerCase() || "";
             if (first && last) {
-                emailLookup.set(`${first}|${last}`, email);
+                emailLookup.set(`${first}|${last}`, emails);
             }
         }
         
         if (sFullNameIdx !== -1) {
             const full = row[sFullNameIdx]?.trim().toLowerCase() || "";
             if (full) {
-                emailLookup.set(full, email);
+                emailLookup.set(full, emails);
             }
         }
     }
+
+    if (maxEmailsFound === 0) {
+        alert("No emails found to merge.");
+        return;
+    }
+
+    // Create new column headers based on filename and count
+    const cleanFileName = filename ? filename.replace(/\.csv$/i, '') : 'Imported';
+    let newHeaders = "";
+    for (let k = 1; k <= maxEmailsFound; k++) {
+        newHeaders += `,${cleanFileName} Email ${k}`;
+    }
+    
+    // Append new headers
+    currentRows[0] += newHeaders;
 
     let matchCount = 0;
     for (let i = 1; i < currentRows.length; i++) {
         let rowCols = parseRowColumns(currentRows[i]);
         
-        let matchEmail = null;
+        let matchEmails = null;
 
         if (pFirstNameIdx !== -1 && pLastNameIdx !== -1) {
             const first = rowCols[pFirstNameIdx]?.trim().toLowerCase() || "";
             const last = rowCols[pLastNameIdx]?.trim().toLowerCase() || "";
             if (first && last) {
-                matchEmail = emailLookup.get(`${first}|${last}`);
+                matchEmails = emailLookup.get(`${first}|${last}`);
             }
         }
 
-        if (!matchEmail && pFullNameIdx !== -1) {
+        if (!matchEmails && pFullNameIdx !== -1) {
             const full = rowCols[pFullNameIdx]?.trim().toLowerCase() || "";
             if (full) {
-                matchEmail = emailLookup.get(full);
+                matchEmails = emailLookup.get(full);
             }
         }
 
-        // Add matching email to the new column
-        if (matchEmail) {
-            // Ensure padding up to the new column
-            while (rowCols.length < pTargetColIdx) {
+        // Add matching emails to the new columns
+        // Ensure padding up to the start of new columns
+        while (rowCols.length < pTargetColIdx) {
+            rowCols.push("");
+        }
+        
+        if (matchEmails && matchEmails.length > 0) {
+            matchEmails.forEach(email => rowCols.push(email));
+            // Pad remaining columns if this person has fewer than max
+            for (let k = matchEmails.length; k < maxEmailsFound; k++) {
                 rowCols.push("");
             }
-            rowCols[pTargetColIdx] = matchEmail;
             matchCount++;
         } else {
              // Just padding if no match
-             while (rowCols.length <= pTargetColIdx) {
+             for (let k = 0; k < maxEmailsFound; k++) {
                 rowCols.push("");
             }
         }
         currentRows[i] = rowCols.join(',');
     }
 
-    alert(`Merged ${matchCount} emails.`);
+    alert(`Merged emails for ${matchCount} matches. Added ${maxEmailsFound} new column(s).`);
     
     // Update state and refresh
-    // We updated 'currentRows' in place (array of strings).
-    // Update enriched data too if separate? App state usually has setEnrichedCsvData.
     setEnrichedCsvData(currentRows);
-    
-    // Redisplay
     displayCsvAsTable(currentRows, normalizeCsvRows);
 }

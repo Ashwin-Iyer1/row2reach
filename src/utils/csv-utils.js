@@ -66,7 +66,41 @@ export function rowsToCsvString(rows) {
  * @returns {string[]} Array of trimmed column values
  */
 export function parseRowColumns(row) {
-  return row.split(",").map((col) => col.trim());
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      // Keep the quote in 'current' so we can strip it strictly if it surrounds the whole token later
+      // OR we can choose to handle it here.
+      // Standard CSV: quotes are part of the value unless they are delimiters.
+      // Let's keep specific simple logic: just toggle state.
+      current += char;
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+
+  // Clean up quotes: strict check if start/end with quotes, then remove them.
+  // Also handle double quotes escaping if needed, but for now simple removal of surrounding quotes.
+  return result.map((col) => {
+    if (col.startsWith('"') && col.endsWith('"')) {
+      // Remove first and last quote
+      let inner = col.slice(1, -1);
+      // If inner has escaped quotes (DOUBLE quotes ""), replace with single quote usually.
+      // But user input might just be simple quotes.
+      // Let's simpler: just return inner.
+      return inner.trim();
+    }
+    return col;
+  });
 }
 
 /**
@@ -177,20 +211,21 @@ export function extractEmailsFromCsv(enrichedCsvData) {
   console.log(`Found ${emailIndices.length} email column(s):`, 
     emailIndices.map(idx => headers[idx]));
 
-  const emails = rows
-    .slice(1)
-    .map((row) => {
-      const cols = parseRowColumns(row);
-      // Try each email column and return the first non-empty value
-      for (const index of emailIndices) {
-        const email = cols[index]?.trim();
-        if (email) {
-          return email;
-        }
+  const emailSet = new Set();
+  
+  rows.slice(1).forEach((row) => {
+    const cols = parseRowColumns(row);
+    // Try each email column and collect all non-empty values
+    for (const index of emailIndices) {
+      const cellValue = cols[index]?.trim();
+      if (cellValue) {
+        // Split by comma or semicolon to handle multiple emails in one cell
+        const parts = cellValue.split(/[;,]/).map(e => e.trim()).filter(e => e);
+        parts.forEach(email => emailSet.add(email));
       }
-      return null;
-    })
-    .filter((email) => email);
+    }
+  });
 
+  const emails = Array.from(emailSet);
   return emails.length > 0 ? emails : null;
 }

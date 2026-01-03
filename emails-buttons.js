@@ -146,12 +146,40 @@ function displayCsvAsTable(csv) {
   renderTable(table);
 }
 
+// Helper to parse row columns respecting quotes
+function parseRowColumns(row) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      current += char;
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+
+  return result.map((col) => {
+    if (col.startsWith('"') && col.endsWith('"')) {
+      return col.slice(1, -1).trim();
+    }
+    return col;
+  });
+}
+
 function getCSVHeaderNames(csv) {
   const rows = normalizeCsvRows(csv);
   if (rows.length === 0) return [];
 
-  const headers = rows[0].split(",").map((h) => h.trim());
-  return headers;
+  const headers = parseRowColumns(rows[0]);
+  return headers.map((h) => h.trim());
 }
 
 document
@@ -432,9 +460,8 @@ document
     let processedRows = 0;
     let totalEmailsGenerated = 0;
 
-    // Process each data row (skip header at index 0)
     for (let i = 1; i < enrichedCsvData.length; i++) {
-      const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+      const dataRow = parseRowColumns(enrichedCsvData[i]);
 
       const domain = (dataRow[domainIdx] || "").trim().toLowerCase();
 
@@ -558,9 +585,14 @@ document.getElementById("sendAll").addEventListener("click", function () {
 
     // Add all other emails from CSV columns
     emailHeaderIndexes.forEach((idx) => {
-      const email = (dataRow[idx] || "").trim().toLowerCase();
-      if (email && !availableEmails.includes(email)) {
-        availableEmails.push(email);
+      const cellValue = (dataRow[idx] || "").trim();
+      if (cellValue) {
+        const parts = cellValue.split(/[;,]/).map(e => e.trim().toLowerCase()).filter(e => e);
+        parts.forEach(email => {
+          if (!availableEmails.includes(email)) {
+            availableEmails.push(email);
+          }
+        });
       }
     });
 
@@ -623,7 +655,7 @@ document
 
       // Process each data row
       for (let i = 1; i < enrichedCsvData.length; i++) {
-        const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+        const dataRow = parseRowColumns(enrichedCsvData[i]);
 
         let formattedText = textInput;
         let formattedSubject = subjectInput;
@@ -860,9 +892,14 @@ document
 
         // Add all other emails from CSV columns
         emailHeaderIndexes.forEach((idx) => {
-          const email = (dataRow[idx] || "").trim().toLowerCase();
-          if (email && !availableEmails.includes(email)) {
-            availableEmails.push(email);
+          const cellValue = (dataRow[idx] || "").trim();
+          if (cellValue) {
+            const parts = cellValue.split(/[;,]/).map(e => e.trim().toLowerCase()).filter(e => e);
+            parts.forEach(email => {
+              if (!availableEmails.includes(email)) {
+                availableEmails.push(email);
+              }
+            });
           }
         });
 
