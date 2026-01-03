@@ -14,6 +14,7 @@ import {
   initializePageLoadHandler,
 } from "./handlers/event-handlers.js";
 import { initializeUpdateHandlers } from "./handlers/update-handler.js";
+import { initializeMergeHandler } from "./handlers/merge-handler.js";
 
 // Initialize state management
 initializeStateListeners();
@@ -21,6 +22,7 @@ initializeStateListeners();
 // Initialize event listeners
 initializeEventListeners();
 initializeUpdateHandlers();
+initializeMergeHandler();
 
 // Initialize page load handler
 initializePageLoadHandler(setEnrichedCsvData, displayCsvAsTable);

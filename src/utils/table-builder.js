@@ -87,6 +87,7 @@ export function renderTable(table) {
   // Show action buttons after table is rendered
   toggleButtonVisibility("email-users-button", true);
   toggleButtonVisibility("download-csv-button", true);
+  toggleButtonVisibility("merge-csv-button", true);
 }
 
 /**
