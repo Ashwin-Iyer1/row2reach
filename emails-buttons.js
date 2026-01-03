@@ -1308,11 +1308,81 @@ function setupRichTextEditor() {
   const btnUnderline = document.getElementById("btn-underline");
   const btnLink = document.getElementById("btn-link");
 
+  // Modal elements
+  const urlModal = document.getElementById("url-input-modal");
+  const urlInput = document.getElementById("url-input");
+  const saveUrlBtn = document.getElementById("save-url-btn");
+  const closeUrlBtn = document.getElementById("close-url-modal");
+
+  let savedSelection = null;
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel.getRangeAt && sel.rangeCount) {
+      savedSelection = sel.getRangeAt(0);
+    } else {
+      savedSelection = null;
+    }
+  };
+
+  const restoreSelection = () => {
+    if (savedSelection) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedSelection);
+    }
+  };
+
   const execCmd = (command, value = null) => {
     document.execCommand(command, false, value);
     // Ensure focus remains/returns to body
     body.focus();
   };
+
+  const openUrlModal = () => {
+    if (urlModal) {
+      saveSelection(); // Save current selection
+      urlInput.value = ""; // Clear previous input
+      urlModal.style.display = "flex";
+      urlInput.focus();
+    }
+  };
+
+  const closeUrlModalAction = () => {
+    if (urlModal) {
+      urlModal.style.display = "none";
+      restoreSelection(); // Restore selection so user is back in editor
+    }
+  };
+
+  if (saveUrlBtn) {
+    // Remove old listeners to avoid duplicates if specific implementation allows
+    // For this pattern, usually simple replacement is fine or use onclick
+    saveUrlBtn.onclick = (e) => {
+      e.preventDefault();
+      const url = urlInput.value.trim();
+      if (url) {
+        restoreSelection(); // Important: restore selection BEFORE execCommand
+        execCmd("createLink", url);
+      }
+      closeUrlModalAction();
+    };
+  }
+
+  if (closeUrlBtn) {
+    closeUrlBtn.onclick = (e) => {
+      e.preventDefault();
+      closeUrlModalAction();
+    };
+  }
+  
+  // Close on outside click
+  window.addEventListener("click", (e) => {
+    if (e.target == urlModal) {
+      closeUrlModalAction();
+    }
+  });
+
 
   const attachEvent = (btn, command, needsUrl = false) => {
     if (!btn) return;
@@ -1325,10 +1395,7 @@ function setupRichTextEditor() {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       if (needsUrl) {
-        const url = prompt("Enter the URL:");
-        if (url) {
-          execCmd(command, url);
-        }
+        openUrlModal();
       } else {
         execCmd(command);
       }
@@ -1360,10 +1427,7 @@ function setupRichTextEditor() {
             break;
           case "k":
             e.preventDefault();
-            const url = prompt("Enter the URL:");
-            if (url) {
-              execCmd("createLink", url);
-            }
+            openUrlModal();
             break;
         }
       }
