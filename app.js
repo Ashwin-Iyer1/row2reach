@@ -250,6 +250,21 @@ ipcMain.on(IPC_MESSAGES.SENDEMAIL, async (event, emailParams) => {
         address: email,
       },
     })),
+    attachments: (emailParams.attachments || [])
+      .filter(filePath => typeof filePath === 'string')
+      .map((filePath) => {
+      try {
+        const fileContent = fs.readFileSync(filePath, { encoding: "base64" });
+        return {
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          name: path.basename(filePath),
+          contentBytes: fileContent,
+        };
+      } catch (e) {
+        console.error("Error reading attachment:", filePath, e);
+        return null;
+      }
+    }).filter(a => a !== null),
   };
 
   const response = await fetch(url, {
@@ -295,6 +310,21 @@ ipcMain.on(IPC_MESSAGES.SENDMAILNOW, async (event, emailParams) => {
           address: email,
         },
       })),
+      attachments: (emailParams.attachments || [])
+        .filter(filePath => typeof filePath === 'string')
+        .map((filePath) => {
+        try {
+          const fileContent = fs.readFileSync(filePath, { encoding: "base64" });
+          return {
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: path.basename(filePath),
+            contentBytes: fileContent,
+          };
+        } catch (e) {
+          console.error("Error reading attachment:", filePath, e);
+          return null;
+        }
+      }).filter(a => a !== null),
     },
     saveToSentItems: true,
   };

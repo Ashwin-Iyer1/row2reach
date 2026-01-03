@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, app } = require("electron");
+const { contextBridge, ipcRenderer, app, webUtils } = require("electron");
 const storage = require("electron-json-storage");
 const path = require("path");
 const os = require("os");
@@ -72,4 +72,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   onUpdateStatus: (callback) =>
     ipcRenderer.on("update-status", (event, data) => callback(data)),
+
+  getPathForFile: (file) => webUtils.getPathForFile(file),
 });

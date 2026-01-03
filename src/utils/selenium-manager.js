@@ -373,7 +373,7 @@ class SeleniumManager {
     return driver;
   }
 
-  async createEmail(driver, recipient, bcc, subject, body, sendNow = false) {
+  async createEmail(driver, recipient, bcc, subject, body, attachments = [], sendNow = false) {
     const newMailButton = await driver.wait(
       until.elementLocated(By.css('button[aria-label="New mail"]')),
       60000
@@ -514,6 +514,52 @@ class SeleniumManager {
       console.error("Error setting body:", e);
     }
 
+    // 5. Handle Attachments
+    if (attachments && attachments.length > 0) {
+      try {
+        console.log("Adding attachments...", attachments);
+        // Often the file input is hidden but present.
+        // We might need to click the 'Attach' button to ensure the DOM is ready,
+        // or just find the input[type='file'].
+        
+        // Strategy: specific to Outlook OWA
+        // Attempt to find the input directly first.
+        let fileInput = await driver
+          .findElement(By.css("input[type='file']"))
+          .catch(() => null);
+
+        if (!fileInput) {
+            // Try clicking the Attach button to initialize user interaction
+            const attachButton = await driver.findElement(
+                By.css('button[aria-label="Attach file"]')
+            ).catch(() => null) || await driver.findElement(
+                By.css('button[name="Attach"]') // Fallback
+            ).catch(() => null);
+
+            if (attachButton) {
+                await attachButton.click();
+                await driver.sleep(500); // Wait for menu
+                // 'Browse this computer' usually exists, but we want the input
+                fileInput = await driver
+                  .findElement(By.css("input[type='file']"))
+                  .catch(() => null);
+            }
+        }
+
+        if (fileInput) {
+             // Join multiple paths with newline for multiple file upload
+             const paths = attachments.join("\n");
+             await fileInput.sendKeys(paths);
+             console.log("Attachments uploaded");
+             await driver.sleep(2000); // Wait for upload
+        } else {
+            console.error("Could not find file input for attachments");
+        }
+      } catch (e) {
+        console.error("Error adding attachments:", e);
+      }
+    }
+
     // 5. Send or Save Draft
     try {
       if (sendNow) {
@@ -542,13 +588,13 @@ class SeleniumManager {
     console.log(`Processing ${emailList.length} emails...`);
 
     for (let i = 0; i < emailList.length; i++) {
-      const { recipient, bcc, subject, body } = emailList[i];
+      const { recipient, bcc, subject, body, attachments } = emailList[i];
       console.log(
         `Processing email ${i + 1}/${emailList.length} to ${recipient}`
       );
 
       try {
-        await this.createEmail(driver, recipient, bcc, subject, body, sendNow);
+        await this.createEmail(driver, recipient, bcc, subject, body, attachments, sendNow);
         console.log(
           `Email ${i + 1} ${sendNow ? "sent" : "drafted"} successfully`
         );

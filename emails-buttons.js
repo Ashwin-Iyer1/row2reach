@@ -370,12 +370,22 @@ document.getElementById("draftAll").addEventListener("click", function () {
 
     if (recipient) {
       // Send the email data to main process
+      // Get attachments
+      const attachmentInput = document.getElementById("email-attachments");
+      const attachmentPaths = [];
+      if (attachmentInput && attachmentInput.files.length > 0) {
+        for (let f of attachmentInput.files) {
+          attachmentPaths.push(window.electronAPI.getPathForFile(f));
+        }
+      }
+
       window.electronAPI.sendMessage("send-email", {
         recipient: recipient,
         bcc: uniqueEmails.filter((email) => email !== recipient),
         subject: formattedSubject,
         body: formattedText,
         importance: "Normal",
+        attachments: attachmentPaths,
       });
       draftCount++;
     }
@@ -572,12 +582,22 @@ document.getElementById("sendAll").addEventListener("click", function () {
 
     if (recipient) {
       // Send the email immediately to main process
+      // Get attachments
+      const attachmentInput = document.getElementById("email-attachments");
+      const attachmentPaths = [];
+      if (attachmentInput && attachmentInput.files.length > 0) {
+        for (let f of attachmentInput.files) {
+          attachmentPaths.push(window.electronAPI.getPathForFile(f));
+        }
+      }
+
       window.electronAPI.sendMessage("send-mail-now", {
         recipient: recipient,
         bcc: uniqueEmails.filter((email) => email !== recipient),
         subject: formattedSubject,
         body: formattedText,
         importance: "Normal",
+        attachments: attachmentPaths,
       });
       sendCount++;
     }
@@ -668,12 +688,23 @@ document
 
           // Send the email data to main process
           const uniqueEmails = [...new Set(availableEmails)];
+          
+          // Get attachments
+          const attachmentInput = document.getElementById("email-attachments");
+          const attachmentPaths = [];
+          if (attachmentInput && attachmentInput.files.length > 0) {
+            for (let f of attachmentInput.files) {
+              attachmentPaths.push(window.electronAPI.getPathForFile(f));
+            }
+          }
+
           window.electronAPI.sendMessage("send-email", {
             recipient: recipient,
             bcc: uniqueEmails.filter((email) => email !== recipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
+            attachments: attachmentPaths,
           });
 
           // Optional UI feedback
@@ -707,12 +738,23 @@ document
 
           // Send the email data to main process
           const uniqueEmails = [...new Set(availableEmails)];
+
+          // Get attachments
+          const attachmentInput = document.getElementById("email-attachments");
+          const attachmentPaths = [];
+          if (attachmentInput && attachmentInput.files.length > 0) {
+            for (let f of attachmentInput.files) {
+              attachmentPaths.push(window.electronAPI.getPathForFile(f));
+            }
+          }
+
           window.electronAPI.sendMessage("send-mail-now", {
             recipient: recipient,
             bcc: uniqueEmails.filter((email) => email !== recipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
+            attachments: attachmentPaths,
           });
 
           // Optional UI feedback
@@ -932,12 +974,25 @@ document
                   ? selectDropdown.value
                   : recipient;
                 const uniqueEmails = [...new Set(availableEmails)];
+
+                // Get attachments
+                const attachmentInput = document.getElementById(
+                  "email-attachments"
+                );
+                const attachmentPaths = [];
+                if (attachmentInput && attachmentInput.files.length > 0) {
+                  for (let f of attachmentInput.files) {
+                    attachmentPaths.push(f.path);
+                  }
+                }
+
                 window.electronAPI.sendMessage("send-email", {
                   recipient: finalRecipient,
                   bcc: uniqueEmails.filter((email) => email !== finalRecipient),
                   subject: formattedSubject,
                   body: formattedText,
                   importance: "Normal",
+                  attachments: attachmentPaths,
                 });
 
                 sendEmailButton.textContent = "Draft Created!";
@@ -950,12 +1005,25 @@ document
                   ? selectDropdown.value
                   : recipient;
                 const uniqueEmails = [...new Set(availableEmails)];
+
+                // Get attachments
+                const attachmentInput = document.getElementById(
+                  "email-attachments"
+                );
+                const attachmentPaths = [];
+                if (attachmentInput && attachmentInput.files.length > 0) {
+                  for (let f of attachmentInput.files) {
+                    attachmentPaths.push(f.path);
+                  }
+                }
+
                 window.electronAPI.sendMessage("send-mail-now", {
                   recipient: finalRecipient,
                   bcc: uniqueEmails.filter((email) => email !== finalRecipient),
                   subject: formattedSubject,
                   body: formattedText,
                   importance: "Normal",
+                  attachments: attachmentPaths,
                 });
 
                 sendEmailNowButton.textContent = "Email Sent!";
@@ -1016,12 +1084,26 @@ document
             // Update the sendEmailButton's onclick to use the new recipient
             sendEmailButton.onclick = () => {
               const uniqueEmails = [...new Set(availableEmails)];
+
+              // Get attachments
+              const attachmentInput = document.getElementById(
+                "email-attachments"
+              );
+              const attachmentPaths = [];
+              if (attachmentInput && attachmentInput.files.length > 0) {
+                for (let f of attachmentInput.files) {
+                  const filePath = window.electronAPI.getPathForFile(f);
+                  attachmentPaths.push(filePath);
+                }
+              }
+
               window.electronAPI.sendMessage("send-email", {
                 recipient: newRecipient,
                 bcc: uniqueEmails.filter((email) => email !== newRecipient),
                 subject: formattedSubject,
                 body: formattedText,
                 importance: "Normal",
+                attachments: attachmentPaths,
               });
 
               sendEmailButton.textContent = "Sent!";
@@ -1068,6 +1150,17 @@ function prepareSeleniumEmailList(textInput, subjectInput) {
     .filter((idx) => idx !== -1);
 
   // Process each data row (skip header at index 0)
+  
+  // Get attachments once
+  const attachmentInput = document.getElementById("email-attachments");
+  const attachmentPaths = [];
+  if (attachmentInput && attachmentInput.files.length > 0) {
+    for (let f of attachmentInput.files) {
+      const filePath = window.electronAPI.getPathForFile(f);
+      attachmentPaths.push(filePath);
+    }
+  }
+
   for (let i = 1; i < enrichedCsvData.length; i++) {
     const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
 
@@ -1148,6 +1241,7 @@ function prepareSeleniumEmailList(textInput, subjectInput) {
         bcc: uniqueEmails.filter((email) => email !== recipient),
         subject: formattedSubject,
         body: formattedText,
+        attachments: attachmentPaths,
       });
     }
   }
