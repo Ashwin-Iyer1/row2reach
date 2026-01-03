@@ -6,7 +6,7 @@ const axios = require("axios");
 const AdmZip = require("adm-zip");
 const { Builder, By, until, Key } = require("selenium-webdriver");
 const chrome = require("selenium-webdriver/chrome");
-const { app } = require("electron");
+const { app, clipboard } = require("electron");
 
 class SeleniumManager {
   constructor() {
@@ -483,19 +483,33 @@ class SeleniumManager {
         );
       }
 
+      // Write rich text to clipboard
+      const plainText = body.replace(/<[^>]*>?/gm, "");
+      clipboard.write({
+        text: plainText,
+        html: body,
+      });
+
+      const modifierKey =
+        process.platform === "darwin" ? Key.COMMAND : Key.CONTROL;
+
       await driver
         .actions()
         .click(bodyTarget)
         .pause(500)
-        .keyDown(process.platform === "win32" ? Key.CONTROL : Key.COMMAND)
+        // Move to top of body
+        .keyDown(modifierKey)
         .sendKeys(Key.UP)
-        .keyUp(process.platform === "win32" ? Key.CONTROL : Key.COMMAND)
+        .keyUp(modifierKey)
         .pause(100)
-        .sendKeys(body)
+        // Paste from clipboard
+        .keyDown(modifierKey)
+        .sendKeys("v")
+        .keyUp(modifierKey)
         .pause(500)
         .perform();
 
-      console.log("Body set (prepended)");
+      console.log("Body set (pasted)");
     } catch (e) {
       console.error("Error setting body:", e);
     }

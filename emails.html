@@ -46,7 +46,14 @@
             </div>
             <div>
               <label for="body">Message:</label>
-              <textarea id="body"></textarea><br /><br />
+              <label for="body">Message:</label>
+              <div class="editor-toolbar">
+                <button type="button" id="btn-bold" title="Bold (Ctrl+B)"><b>B</b></button>
+                <button type="button" id="btn-italic" title="Italic (Ctrl+I)"><i>I</i></button>
+                <button type="button" id="btn-underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <button type="button" id="btn-link" title="Link (Ctrl+K)">🔗</button>
+              </div>
+              <div id="body" class="rich-text-editor" contenteditable="true"></div><br /><br />
             </div>
           </form>
           <button id="preview-button" type="submit">Preview</button>

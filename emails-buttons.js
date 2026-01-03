@@ -196,7 +196,7 @@ document
 
 // Modal Draft All handler
 document.getElementById("modal-draft-all").addEventListener("click", () => {
-  const textInput = document.getElementById("body").value;
+  const textInput = document.getElementById("body").innerHTML;
   const subjectInput = document.getElementById("subject").value;
 
   if (!textInput || !subjectInput) {
@@ -215,7 +215,7 @@ document.getElementById("modal-draft-all").addEventListener("click", () => {
 
 // Modal Send All handler
 document.getElementById("modal-send-all").addEventListener("click", () => {
-  const textInput = document.getElementById("body").value;
+  const textInput = document.getElementById("body").innerHTML;
   const subjectInput = document.getElementById("subject").value;
 
   if (!textInput || !subjectInput) {
@@ -257,7 +257,7 @@ window.electronAPI.onHideButton((event, message) => {
 
 // Draft All button handler
 document.getElementById("draftAll").addEventListener("click", function () {
-  const textInput = document.getElementById("body").value;
+  const textInput = document.getElementById("body").innerHTML;
   const subjectInput = document.getElementById("subject").value;
 
   if (!textInput || !subjectInput) {
@@ -459,7 +459,7 @@ document
 
 // Send All button handler
 document.getElementById("sendAll").addEventListener("click", function () {
-  const textInput = document.getElementById("body").value;
+  const textInput = document.getElementById("body").innerHTML;
   const subjectInput = document.getElementById("subject").value;
 
   if (!textInput || !subjectInput) {
@@ -589,7 +589,7 @@ document.getElementById("sendAll").addEventListener("click", function () {
 document
   .getElementById("preview-button")
   .addEventListener("click", function () {
-    const textInput = document.getElementById("body").value;
+    const textInput = document.getElementById("body").innerHTML;
     const subjectInput = document.getElementById("subject").value;
     const preview_list = document.getElementById("preview-list");
 
@@ -1299,3 +1299,78 @@ window.addEventListener("DOMContentLoaded", () => {
     emailsList.appendChild(p);
   });
 });
+
+// Rich Text Editor Setup
+function setupRichTextEditor() {
+  const body = document.getElementById("body");
+  const btnBold = document.getElementById("btn-bold");
+  const btnItalic = document.getElementById("btn-italic");
+  const btnUnderline = document.getElementById("btn-underline");
+  const btnLink = document.getElementById("btn-link");
+
+  const execCmd = (command, value = null) => {
+    document.execCommand(command, false, value);
+    // Ensure focus remains/returns to body
+    body.focus();
+  };
+
+  const attachEvent = (btn, command, needsUrl = false) => {
+    if (!btn) return;
+
+    // Prevent focus loss when clicking the button
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+    });
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (needsUrl) {
+        const url = prompt("Enter the URL:");
+        if (url) {
+          execCmd(command, url);
+        }
+      } else {
+        execCmd(command);
+      }
+    });
+  };
+
+  attachEvent(btnBold, "bold");
+  attachEvent(btnItalic, "italic");
+  attachEvent(btnUnderline, "underline");
+  attachEvent(btnLink, "createLink", true);
+
+  // Shortcuts
+  if (body) {
+    // Ensure we capture keydowns for shortcuts
+    body.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case "b":
+            e.preventDefault();
+            execCmd("bold");
+            break;
+          case "i":
+            e.preventDefault();
+            execCmd("italic");
+            break;
+          case "u":
+            e.preventDefault();
+            execCmd("underline");
+            break;
+          case "k":
+            e.preventDefault();
+            const url = prompt("Enter the URL:");
+            if (url) {
+              execCmd("createLink", url);
+            }
+            break;
+        }
+      }
+    });
+  }
+}
+
+// Initialize editor
+setupRichTextEditor();
+
