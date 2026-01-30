@@ -229,3 +229,45 @@ export function extractEmailsFromCsv(enrichedCsvData) {
   const emails = Array.from(emailSet);
   return emails.length > 0 ? emails : null;
 }
+
+/**
+ * Escape CSV cell content.
+ * @param {string} cell - Cell content
+ * @returns {string} Escaped cell content
+ */
+export function escapeCsvCell(cell) {
+  if (cell == null) return "";
+  const cellStr = String(cell);
+  if (
+    cellStr.includes(",") ||
+    cellStr.includes('"') ||
+    cellStr.includes("\n") ||
+    cellStr.includes("\r")
+  ) {
+    return `"${cellStr.replace(/"/g, '""')}"`;
+  }
+  return cellStr;
+}
+
+/**
+ * Update a specific cell in a CSV row string.
+ * @param {string} rowString - Original CSV row string
+ * @param {number} colIndex - Column index to update
+ * @param {string} newValue - New value for the cell
+ * @returns {string} Updated CSV row string
+ */
+export function updateRowCell(rowString, colIndex, newValue) {
+  const columns = parseRowColumns(rowString);
+  
+  if (colIndex < columns.length) {
+    columns[colIndex] = newValue.trim();
+  } else {
+    // Extend row if needed
+    while (columns.length < colIndex) {
+      columns.push("");
+    }
+    columns.push(newValue.trim());
+  }
+
+  return columns.map(col => escapeCsvCell(col)).join(",");
+}

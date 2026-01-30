@@ -28,14 +28,30 @@ export function createTableHeader(headers) {
 /**
  * Create a single table row element.
  * @param {string[]} cellData - Array of cell values
+ * @param {number} rowIndex - The index of the row
+ * @param {Function} onUpdate - Callback for cell updates
  * @returns {HTMLTableRowElement} Table row element
  */
-export function createTableRow(cellData) {
+export function createTableRow(cellData, rowIndex, onUpdate) {
   const tr = document.createElement("tr");
 
-  cellData.forEach((data) => {
+  cellData.forEach((data, colIndex) => {
     const td = document.createElement("td");
     td.textContent = data;
+    td.contentEditable = "true";
+    td.dataset.rowIndex = rowIndex;
+    td.dataset.colIndex = colIndex;
+
+    // Add input and blur listeners if callback is provided
+    if (onUpdate && typeof onUpdate === "function") {
+      const updateHandler = function() {
+        onUpdate(rowIndex, colIndex, this.textContent);
+      };
+      
+      td.addEventListener("input", updateHandler);
+      td.addEventListener("blur", updateHandler);
+    }
+
     tr.appendChild(td);
   });
 
@@ -45,14 +61,15 @@ export function createTableRow(cellData) {
 /**
  * Create a table body with data rows.
  * @param {string[]} rows - Array of CSV rows (excluding header)
+ * @param {Function} onUpdate - Callback for cell updates
  * @returns {HTMLTableSectionElement} Table tbody element
  */
-export function createTableBody(rows) {
+export function createTableBody(rows, onUpdate) {
   const tbody = document.createElement("tbody");
 
   for (let i = 1; i < rows.length; i++) {
     const rowData = parseRowColumns(rows[i]);
-    const tr = createTableRow(rowData);
+    const tr = createTableRow(rowData, i, onUpdate);
     tbody.appendChild(tr);
   }
 
@@ -62,15 +79,16 @@ export function createTableBody(rows) {
 /**
  * Build a complete table element from CSV rows (first row is header).
  * @param {string[]} rows - Array of CSV rows
+ * @param {Function} onUpdate - Callback for cell updates
  * @returns {HTMLTableElement} Complete table element
  */
-export function buildTableFromRows(rows) {
+export function buildTableFromRows(rows, onUpdate) {
   const table = document.createElement("table");
   table.border = "1";
 
   const headers = parseRowColumns(rows[0]);
   table.appendChild(createTableHeader(headers));
-  table.appendChild(createTableBody(rows));
+  table.appendChild(createTableBody(rows, onUpdate));
 
   return table;
 }
@@ -102,12 +120,14 @@ export function dispatchCsvRowsUpdated(rows) {
  * Public function to display CSV as a table.
  * Accepts CSV string or array, normalizes, dispatches event, and renders table.
  * @param {string|string[]} csv - CSV content
+ * @param {Function} normalizeCsvRows - Normalizer function
+ * @param {Function} onUpdate - Callback for cell updates
  */
-export function displayCsvAsTable(csv, normalizeCsvRows) {
+export function displayCsvAsTable(csv, normalizeCsvRows, onUpdate) {
   const rows = normalizeCsvRows(csv);
   if (rows.length === 0) return;
 
   dispatchCsvRowsUpdated(rows);
-  const table = buildTableFromRows(rows);
+  const table = buildTableFromRows(rows, onUpdate);
   renderTable(table);
 }

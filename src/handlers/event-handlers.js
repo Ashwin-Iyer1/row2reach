@@ -131,13 +131,18 @@ export function initializeEventListeners() {
 /**
  * Initialize page load handler.
  */
-export function initializePageLoadHandler(setEnrichedCsvData, displayCsvAsTable) {
+export function initializePageLoadHandler(setEnrichedCsvData, setCsvRows, displayCsvAsTable, onUpdate) {
   window.addEventListener("DOMContentLoaded", () => {
     if (localStorage.getItem("emailsAsCsv")) {
       const localData = localStorage.getItem("emailsAsCsv");
       const enrichedData = normalizeCsvRows(localData);
+      
+      // Update both state variables
       setEnrichedCsvData(enrichedData);
-      displayCsvAsTable(enrichedData, normalizeCsvRows);
+      setCsvRows(enrichedData);
+      
+      // Render table with update callback
+      displayCsvAsTable(enrichedData, normalizeCsvRows, onUpdate);
     }
   });
 }

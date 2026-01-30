@@ -103,11 +103,20 @@ function buildTableFromRows(rows) {
   // Body
   const tbody = document.createElement("tbody");
   for (let i = 1; i < rows.length; i++) {
-    const rowData = rows[i].split(",");
+    const rowData = parseRowColumns(rows[i]); // Use parseRowColumns to handle quotes correctly
     const tr = document.createElement("tr");
-    rowData.forEach((cellData) => {
+    rowData.forEach((cellData, colIndex) => {
       const td = document.createElement("td");
       td.textContent = cellData.trim();
+      td.contentEditable = "true"; // Make cell editable
+      td.dataset.rowIndex = i; // Store row index
+      td.dataset.colIndex = colIndex; // Store column index
+      
+      // Add input listener to update data on edit
+      td.addEventListener("input", function() {
+        updateCsvData(i, colIndex, this.textContent);
+      });
+      
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -115,6 +124,30 @@ function buildTableFromRows(rows) {
   table.appendChild(tbody);
 
   return table;
+}
+
+/**
+ * Update the global enrichedCsvData array when a cell is edited.
+ */
+function updateCsvData(rowIndex, colIndex, newValue) {
+  if (!enrichedCsvData || !enrichedCsvData[rowIndex]) return;
+
+  const rowContent = enrichedCsvData[rowIndex];
+  const columns = parseRowColumns(rowContent);
+  
+  // Update the specific column
+  if (colIndex < columns.length) {
+    columns[colIndex] = newValue.trim();
+  } else {
+    // Handle case where column might be new or out of bounds (unlikely with fixed logic but good safety)
+    columns[colIndex] = newValue.trim();
+  }
+
+  // Reconstruct the CSV row
+  const newRowString = columns.map(col => escapeCsvCell(col)).join(",");
+  enrichedCsvData[rowIndex] = newRowString;
+  
+  console.log(`Updated row ${rowIndex}, col ${colIndex} to: ${newValue}`);
 }
 
 /**
@@ -309,7 +342,7 @@ document.getElementById("draftAll").addEventListener("click", function () {
 
   // Process each data row (skip header at index 0)
   for (let i = 1; i < enrichedCsvData.length; i++) {
-    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+    const dataRow = parseRowColumns(enrichedCsvData[i]);
 
     let formattedText = textInput;
     let formattedSubject = subjectInput;
@@ -374,9 +407,14 @@ document.getElementById("draftAll").addEventListener("click", function () {
 
     // Add all other emails from CSV columns
     emailHeaderIndexes.forEach((idx) => {
-      const email = (dataRow[idx] || "").trim().toLowerCase();
-      if (email && !availableEmails.includes(email)) {
-        availableEmails.push(email);
+      const cellValue = (dataRow[idx] || "").trim();
+      if (cellValue) {
+        const parts = cellValue.split(/[;,]/).map(e => e.trim().toLowerCase()).filter(e => e);
+        parts.forEach(email => {
+          if (!availableEmails.includes(email)) {
+            availableEmails.push(email);
+          }
+        });
       }
     });
 
@@ -475,11 +513,26 @@ document
             lastName
           );
 
+          // Collect existing emails in this row to avoid duplicates
+          const existingRowEmails = new Set();
+          emailHeaderIndexes.forEach((idx) => {
+            const cellValue = (dataRow[idx] || "").trim();
+            if (cellValue) {
+              const parts = cellValue.split(/[;,]/).map(e => e.trim().toLowerCase()).filter(e => e);
+              parts.forEach(e => existingRowEmails.add(e));
+            }
+          });
+
+          // Filter out any generated emails that already exist
+          const uniqueNortheasternEmails = northeasternEmails.filter(
+            (email) => !existingRowEmails.has(email.toLowerCase())
+          );
+
           // Store the generated emails for this row
-          northeasternBccsByRow[i] = northeasternEmails;
+          northeasternBccsByRow[i] = uniqueNortheasternEmails;
 
           processedRows++;
-          totalEmailsGenerated += northeasternEmails.length;
+          totalEmailsGenerated += uniqueNortheasternEmails.length;
         }
       }
     }
@@ -520,7 +573,7 @@ document.getElementById("sendAll").addEventListener("click", function () {
 
   // Process each data row (skip header at index 0)
   for (let i = 1; i < enrichedCsvData.length; i++) {
-    const dataRow = enrichedCsvData[i].split(",").map((d) => d.trim());
+    const dataRow = parseRowColumns(enrichedCsvData[i]);
 
     let formattedText = textInput;
     let formattedSubject = subjectInput;
@@ -703,19 +756,14 @@ document
           signInButton.style.display == "none" ? "block" : "none";
 
         sendEmailButton.onclick = () => {
-          // Example: assume one column is called "Email" in your CSV
-          const emailHeaderIndexes = headers
-            .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
-            .filter((i) => i !== -1);
+          // Use the initially determined recipient (or from dropdown if we had access, but here we default to primary)
+          // Better: Use the logic that prioritizes Northeastern or first valid email, keeping consistency with preview.
+          
+          let finalRecipient = recipientEmail; // defaulting to the one calculated for preview
 
-          // Loop through those columns and pick the first filled one
-          let recipient = "";
-          for (const i of emailHeaderIndexes) {
-            const value = (dataRow[i] || "").trim();
-            if (value) {
-              recipient = value;
-              break;
-            }
+          // If we want to be very safe and ensure we don't grab a raw cell with commas:
+          if (!finalRecipient && availableEmails.length > 0) {
+             finalRecipient = availableEmails[0];
           }
 
           // Send the email data to main process
@@ -731,8 +779,8 @@ document
           }
 
           window.electronAPI.sendMessage("send-email", {
-            recipient: recipient,
-            bcc: uniqueEmails.filter((email) => email !== recipient),
+            recipient: finalRecipient,
+            bcc: uniqueEmails.filter((email) => email !== finalRecipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
@@ -753,19 +801,11 @@ document
           signInButton.style.display == "none" ? "block" : "none";
 
         sendEmailNowButton.onclick = () => {
-          // Example: assume one column is called "Email" in your CSV
-          const emailHeaderIndexes = headers
-            .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
-            .filter((i) => i !== -1);
+           let finalRecipient = recipientEmail; // defaulting to the one calculated for preview
 
-          // Loop through those columns and pick the first filled one
-          let recipient = "";
-          for (const i of emailHeaderIndexes) {
-            const value = (dataRow[i] || "").trim();
-            if (value) {
-              recipient = value;
-              break;
-            }
+          // If we want to be very safe and ensure we don't grab a raw cell with commas:
+          if (!finalRecipient && availableEmails.length > 0) {
+             finalRecipient = availableEmails[0];
           }
 
           // Send the email data to main process
@@ -781,8 +821,8 @@ document
           }
 
           window.electronAPI.sendMessage("send-mail-now", {
-            recipient: recipient,
-            bcc: uniqueEmails.filter((email) => email !== recipient),
+            recipient: finalRecipient,
+            bcc: uniqueEmails.filter((email) => email !== finalRecipient),
             subject: formattedSubject,
             body: formattedText,
             importance: "Normal",
@@ -807,10 +847,18 @@ document
         subjectPreview.style.padding = "5px";
         subjectPreview.textContent = `${formattedSubject}`;
 
-        // Create a textarea for this row's body preview
-        const textarea = document.createElement("textarea");
-        textarea.id = `preview-textarea`;
-        textarea.value = formattedText;
+        // Create a div for this row's body preview to render HTML
+        const previewDiv = document.createElement("div");
+        previewDiv.id = `preview-div`;
+        previewDiv.innerHTML = formattedText;
+        previewDiv.style.border = "1px solid #ccc";
+        previewDiv.style.padding = "10px";
+        previewDiv.style.borderRadius = "4px";
+        previewDiv.style.minHeight = "100px";
+        previewDiv.style.marginBottom = "5px";
+        previewDiv.style.whiteSpace = "normal"; // Allow text wrapping
+        previewDiv.style.overflowY = "auto";
+        previewDiv.style.maxHeight = "300px"; // Prevent it from getting too tall
         const emailHeaderIndexes = headers
           .map((h, i) => (h.toLowerCase().includes("email") ? i : -1))
           .filter((i) => i !== -1);
@@ -906,7 +954,7 @@ document
         // Add northeastern BCCs if they were already generated
         if (northeasternBccsByRow[i]) {
           northeasternBccsByRow[i].forEach((email) => {
-            const lowerEmail = email.toLowerCase();
+            const lowerEmail = email.toLowerCase().trim();
             if (!availableEmails.includes(lowerEmail)) {
               availableEmails.push(lowerEmail);
             }
@@ -967,11 +1015,26 @@ document
                 lastName
               );
 
+              // Collect existing emails in this row to avoid duplicates
+              const existingRowEmails = new Set();
+              emailHeaderIndexes.forEach((idx) => {
+                const cellValue = (dataRow[idx] || "").trim();
+                if (cellValue) {
+                  const parts = cellValue.split(/[;,]/).map(e => e.trim().toLowerCase()).filter(e => e);
+                  parts.forEach(e => existingRowEmails.add(e));
+                }
+              });
+
+              // Filter out any generated emails that already exist
+              const uniqueNortheasternEmails = northeasternEmails.filter(
+                (email) => !existingRowEmails.has(email.toLowerCase())
+              );
+
               // Store in global object so Draft All/Send All can use them
-              northeasternBccsByRow[i] = northeasternEmails;
+              northeasternBccsByRow[i] = uniqueNortheasternEmails;
 
               // Add the generated emails to availableEmails array (normalize to lowercase)
-              northeasternEmails.forEach((email) => {
+              uniqueNortheasternEmails.forEach((email) => {
                 const lowerEmail = email.toLowerCase();
                 if (!availableEmails.includes(lowerEmail)) {
                   availableEmails.push(lowerEmail);
@@ -1163,7 +1226,7 @@ document
         parentDiv.appendChild(label);
         parentDiv.appendChild(recipientContainer);
         parentDiv.appendChild(subjectPreview);
-        parentDiv.appendChild(textarea);
+        parentDiv.appendChild(previewDiv);
       }
     } else {
       // If no CSV data, show message
@@ -1540,8 +1603,9 @@ function setupRichTextEditor() {
 
   // Shortcuts
   if (body) {
-    // Ensure we capture keydowns for shortcuts
+    // Ensure we capture keydowns for shortcuts and Enter key
     body.addEventListener("keydown", (e) => {
+      // Handle shortcuts
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
           case "b":
@@ -1561,6 +1625,14 @@ function setupRichTextEditor() {
             openUrlModal();
             break;
         }
+      } 
+      // Handle Enter key to insert <br> instead of <div><br></div>
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        // Insert a line break
+        document.execCommand("insertHTML", false, "<br><br>");
+        // Scroll to the bottom or selection to keep cursor in view if needed, 
+        // usually verify if browser handles it.
       }
     });
   }
