@@ -3,7 +3,7 @@
  * Handles logic for merging a secondary CSV into the main data
  */
 
-import { parseRowColumns } from "../utils/csv-utils.js";
+import { parseRowColumns, escapeCsvCell } from "../utils/csv-utils.js";
 import { getCsvRows, setEnrichedCsvData } from "../state/app-state.js";
 import { displayCsvAsTable } from "../utils/table-builder.js";
 import { normalizeCsvRows } from "../utils/csv-utils.js";
@@ -22,26 +22,44 @@ export function initializeMergeHandler() {
     const file = event.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const secondaryCsvContent = e.target.result;
-      mergeEmailsFromCsv(secondaryCsvContent, file.name);
-      // Reset input
-      event.target.value = '';
+    const input = event.target;
+    const reportError = issue => {
+      alert(`Could not merge this CSV: ${issue instanceof Error ? issue.message : 'The file could not be read. Please choose it again.'}`);
     };
-    reader.readAsText(file);
+    try {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          mergeEmailsFromCsv(e.target.result, file.name);
+        } catch (issue) {
+          reportError(issue);
+        } finally {
+          input.value = '';
+        }
+      };
+      reader.onerror = function() {
+        input.value = '';
+        reportError(reader.error);
+      };
+      reader.onabort = function() { input.value = ''; };
+      reader.readAsText(file);
+    } catch (issue) {
+      input.value = '';
+      reportError(issue);
+    }
   });
 }
 
 function mergeEmailsFromCsv(secondaryCsv, filename) {
-    let currentRows = getCsvRows();
+    // Work on a copy so a malformed later row cannot partially mutate the main CSV.
+    const currentRows = [...(getCsvRows() || [])];
     
     if (!currentRows || currentRows.length === 0) {
         alert("No main CSV loaded.");
         return;
     }
 
-    const secondaryRows = secondaryCsv.split(/\r?\n/).filter(r => r.trim() !== "");
+    const secondaryRows = normalizeCsvRows(secondaryCsv);
     if (secondaryRows.length < 2) return;
 
     const primaryHeaders = parseRowColumns(currentRows[0]).map(h => h.trim().toLowerCase());
@@ -120,7 +138,7 @@ function mergeEmailsFromCsv(secondaryCsv, filename) {
     const cleanFileName = filename ? filename.replace(/\.csv$/i, '') : 'Imported';
     let newHeaders = "";
     for (let k = 1; k <= maxEmailsFound; k++) {
-        newHeaders += `,${cleanFileName} Email ${k}`;
+        newHeaders += `,${escapeCsvCell(`${cleanFileName} Email ${k}`)}`;
     }
     
     // Append new headers
@@ -166,7 +184,7 @@ function mergeEmailsFromCsv(secondaryCsv, filename) {
                 rowCols.push("");
             }
         }
-        currentRows[i] = rowCols.join(',');
+        currentRows[i] = rowCols.map(escapeCsvCell).join(',');
     }
 
     alert(`Merged emails for ${matchCount} matches. Added ${maxEmailsFound} new column(s).`);

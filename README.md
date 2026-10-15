@@ -1,6 +1,6 @@
 # Row 2 Reach
 
-A powerful Electron desktop application for enriching CSV data with email addresses from Apollo and ZeroBounce APIs, and sending personalized bulk emails.
+An Electron desktop application for enriching CSV data with email addresses from Apollo and ZeroBounce APIs, and sending personalized bulk emails.
 
 ## Features
 
@@ -12,6 +12,17 @@ A powerful Electron desktop application for enriching CSV data with email addres
 - **Variable Templates**: Use CSV column data as variables in email templates
 - **Data Export**: Download enriched CSV files with new email columns
 - **Modern UI**: Clean, responsive interface with dark/light mode support
+
+## Contact studio (no credentials required)
+
+The new [contact studio](studio/index.html) is a local CSV quality and draft-review workspace. Run `npm run studio`, then open `http://127.0.0.1:4188/studio/`. It runs without Electron, provider keys, or a network connection after loading. The included contacts are fictional and use reserved `example.com` addresses.
+
+- Paste or open CSV, including quoted commas, embedded newlines, and escaped quotes.
+- Map the email column; catch malformed addresses, duplicates, unknown template variables, and missing values.
+- Inspect every personalized subject and message, filter issues, and export ready drafts as CSV.
+- No enrichment calls, authentication, draft creation in an external mailbox, or email sending occur in the studio. Format checks do not verify deliverability or consent. Data lives only in the current tab.
+
+The shared parser also fixes quoted-field roundtrips in the desktop editor and CSV merge flow. `npm test` checks CSV fidelity, rejection of malformed records, duplicate detection, template readiness, and spreadsheet-safe export.
 
 ## Installation
 

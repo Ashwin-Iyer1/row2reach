@@ -16,10 +16,11 @@
   },
   "scripts": {
     "start": "electron app.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/*.test.mjs",
     "buildMac": "electron-packager . --overwrite --platform=darwin --arch=arm64 --out=release-builds --icon=assets/icon.icns --executable-name=\"Row 2 Reach\"",
     "buildWin": "electron-packager . \"Row_2_Reach\" --overwrite --platform=win32 --arch=x64 --out=release-builds --version-string.CompanyName=\"Row 2 Reach\" --version-string.FileDescription=\"Row 2 Reach Application\" --version-string.ProductName=\"Row 2 Reach\" --icon=assets/icon.png",
-    "create-installer": "node build-installer.js"
+    "create-installer": "node build-installer.js",
+    "studio": "python -m http.server 4188 --bind 127.0.0.1"
   },
   "author": "Ashwin Iyer",
   "license": "ISC",

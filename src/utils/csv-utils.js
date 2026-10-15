@@ -1,3 +1,5 @@
+import { parseCsv, serializeCsv, escapeCell } from "../../studio/core.mjs";
+
 /**
  * CSV Utilities Module
  * Handles CSV parsing, normalization, and manipulation
@@ -10,45 +12,7 @@
  * @returns {string[]} Normalized array of row strings
  */
 export function normalizeCsvRows(csv) {
-  let rows = Array.isArray(csv)
-    ? csv.filter((row) => row.trim() !== "")
-    : csv.split(/\r?\n/).filter((row) => row.trim() !== "");
-
-  // Fix for malformed one-liner input
-  if (shouldFixOneLinerCsv(rows)) {
-    rows = fixOneLinerCsv(rows[0]);
-  }
-
-  return rows;
-}
-
-/**
- * Check if CSV is a malformed one-liner that needs fixing.
- * @param {string[]} rows - Array of CSV rows
- * @returns {boolean}
- */
-function shouldFixOneLinerCsv(rows) {
-  return rows.length === 1 && rows[0].includes("ContactOut Email,");
-}
-
-/**
- * Fix a malformed one-liner CSV by splitting it into proper rows.
- * @param {string} oneLiner - Single-line CSV string
- * @returns {string[]} Fixed array of CSV rows
- */
-function fixOneLinerCsv(oneLiner) {
-  const parts = oneLiner.split(",");
-  const header = parts.slice(0, 4).join(",");
-  const data = parts.slice(4);
-
-  const fixedRows = [header];
-  for (let i = 0; i < data.length; i += 4) {
-    const chunk = data.slice(i, i + 4);
-    if (chunk.length) {
-      fixedRows.push(chunk.join(","));
-    }
-  }
-  return fixedRows;
+  return parseCsv(Array.isArray(csv) ? csv.join("\n") : csv).map(row => serializeCsv([row]));
 }
 
 /**
@@ -63,44 +27,10 @@ export function rowsToCsvString(rows) {
 /**
  * Parse a CSV row into columns.
  * @param {string} row - CSV row string
- * @returns {string[]} Array of trimmed column values
+ * @returns {string[]} Array of decoded column values, preserving data whitespace
  */
 export function parseRowColumns(row) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < row.length; i++) {
-    const char = row[i];
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      // Keep the quote in 'current' so we can strip it strictly if it surrounds the whole token later
-      // OR we can choose to handle it here.
-      // Standard CSV: quotes are part of the value unless they are delimiters.
-      // Let's keep specific simple logic: just toggle state.
-      current += char;
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-
-  // Clean up quotes: strict check if start/end with quotes, then remove them.
-  // Also handle double quotes escaping if needed, but for now simple removal of surrounding quotes.
-  return result.map((col) => {
-    if (col.startsWith('"') && col.endsWith('"')) {
-      // Remove first and last quote
-      let inner = col.slice(1, -1);
-      // If inner has escaped quotes (DOUBLE quotes ""), replace with single quote usually.
-      // But user input might just be simple quotes.
-      // Let's simpler: just return inner.
-      return inner.trim();
-    }
-    return col;
-  });
+  return parseCsv(row)[0] || [];
 }
 
 /**
@@ -109,7 +39,7 @@ export function parseRowColumns(row) {
  * @returns {string[]} Array of lowercase header names
  */
 export function parseHeaders(headerRow) {
-  return parseRowColumns(headerRow).map((h) => h.toLowerCase());
+  return parseRowColumns(headerRow).map((h) => h.trim().toLowerCase());
 }
 
 /**
@@ -171,7 +101,7 @@ export function setEmailInRow(headerRow, row, email, headerName) {
   
   if (targetColumnIndex === -1) {
     // Header not found, append to the end
-    return row + "," + email;
+    return serializeCsv([[...currentRow, email]]);
   }
 
   if (currentRow.length <= targetColumnIndex) {
@@ -185,7 +115,7 @@ export function setEmailInRow(headerRow, row, email, headerName) {
     currentRow[targetColumnIndex] = email;
   }
   
-  return currentRow.join(",");
+  return serializeCsv([currentRow]);
 }
 
 /**
@@ -236,17 +166,7 @@ export function extractEmailsFromCsv(enrichedCsvData) {
  * @returns {string} Escaped cell content
  */
 export function escapeCsvCell(cell) {
-  if (cell == null) return "";
-  const cellStr = String(cell);
-  if (
-    cellStr.includes(",") ||
-    cellStr.includes('"') ||
-    cellStr.includes("\n") ||
-    cellStr.includes("\r")
-  ) {
-    return `"${cellStr.replace(/"/g, '""')}"`;
-  }
-  return cellStr;
+  return escapeCell(cell);
 }
 
 /**
