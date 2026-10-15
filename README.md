@@ -1,5 +1,7 @@
 # Row 2 Reach
 
+[Try the contact studio](https://ashwiniyer.com/demos/row2reach/index.html) · [Read the case study](https://ashwiniyer.com/projects/row2reach)
+
 An Electron desktop application for enriching CSV data with email addresses from Apollo and ZeroBounce APIs, and sending personalized bulk emails.
 
 ## Features
