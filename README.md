@@ -26,6 +26,8 @@ The new [contact studio](studio/index.html) is a local CSV quality and draft-rev
 
 The shared parser also fixes quoted-field roundtrips in the desktop editor and CSV merge flow. `npm test` checks CSV fidelity, rejection of malformed records, duplicate detection, template readiness, and spreadsheet-safe export.
 
+GitHub Actions runs the existing offline suite on Node 22 for pushes and pull requests to `main`, including upload races and failed-merge recovery. These tests need no dependency installation: they use Node built-ins, local modules, and in-memory file/DOM fixtures. The static studio has no build step. CI does not launch Electron, call providers, send email, or produce installers.
+
 ## Installation
 
 ### Windows

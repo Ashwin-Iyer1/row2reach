@@ -1,0 +1,31 @@
+name: Verify CSV and contact studio
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      # These tests use Node built-ins and local modules only. Installing the
+      # Electron/provider dependencies is unnecessary for this offline suite.
+      - name: Test CSV fidelity, draft readiness and upload/merge races
+        run: npm test
+      - name: Check the standalone studio entry point
+        run: node --check studio/app.mjs
